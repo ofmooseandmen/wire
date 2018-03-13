@@ -6,6 +6,10 @@
 
 An implementation of the Google CASTV2 protocol in Java.
 
+## Acknowledgement
+
+Hat tip to [github.com/thibauts](https://github.com/thibauts) for his detailed description of the [Cast V2 protocol](https://github.com/thibauts/node-castv2#protocol-description)!
+
 ## Building from Source
 
 You need [JDK-8](http://openjdk.java.net/projects/jdk8/) or higher to build Wire.
