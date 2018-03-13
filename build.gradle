@@ -1,0 +1,177 @@
+apply plugin: 'base'
+apply plugin: 'eclipse'
+apply plugin: 'com.google.protobuf'
+apply plugin: 'org.sonarqube'
+apply plugin: 'com.bmuschko.nexus'
+apply from: 'libraries.gradle'
+apply from: 'gradle/eclipse-prefs/eclipse.gradle'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    
+    dependencies {
+        classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.4'
+        classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.6.2'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'jacoco'
+jacoco { toolVersion = '0.8.0' }
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compile libraries.protobuf.java
+    compile libraries.gson
+    compile libraries.halo
+    testCompile libraries.awaitility
+    testCompile libraries.cucumber
+    testCompile libraries.junit
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = libraries.protobuf.protoc
+    }
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled true
+    }
+}
+
+if (Integer.valueOf(JavaVersion.current().getMajorVersion()) > 8) {
+    // --release 8: configures the compiler to produce class files that will link against version 8
+    compileJava.options.compilerArgs += ['--release', 8]
+}
+
+compileJava.options.encoding = 'UTF-8'
+// See: https://docs.oracle.com/javase/9/tools/javac.htm#JSWOR627
+compileJava.options.compilerArgs += [
+    // '-Xlint:cast', // FIXME because of protobuf
+    '-Xlint:classfile',
+    '-Xlint:deprecation',
+    '-Xlint:dep-ann',
+    '-Xlint:divzero',
+    '-Xlint:empty',
+    '-Xlint:fallthrough',
+    '-Xlint:finally',
+    '-Xlint:overrides',
+    '-Xlint:path',
+    '-Xlint:processing',
+    '-Xlint:rawtypes',
+    '-Xlint:serial',
+    '-Xlint:static',
+    '-Xlint:unchecked',
+    '-Xlint:varargs',
+    '-Xlint:-options',
+    '-Werror'
+]
+
+jar {
+    /* include source */
+    from (sourceSets.main.allSource.getSrcDirTrees())
+}
+
+javadoc {
+   options.memberLevel = JavadocMemberLevel.PUBLIC
+}
+
+/* Modify the Eclipse project settings. */
+eclipse { 
+    jdt { file { withProperties eclipsePrefs } } 
+
+    classpath {
+        /* ignore optional problems in generated code. */
+        file {
+            whenMerged {
+                entries.each {
+                    source ->
+                    if (source.kind == 'src' && source.path.contains('generated')) {
+                        source.entryAttributes['ignore_optional_problems'] = 'true'
+                    }
+                }
+            }
+        }
+    }
+}
+
+task ('copyEclipsePrefs', type: Copy) {
+    from rootProject.file('gradle/eclipse-prefs/org.eclipse.jdt.ui.prefs')
+    into "${projectDir}/.settings"
+}
+tasks.eclipse.finalizedBy copyEclipsePrefs
+
+extraArchive {
+    sources = true
+    tests = true
+    javadoc = true
+}
+
+modifyPom {
+    project {
+        name 'wire'
+        description 'Google CASTV2 Protocol Client'
+        url 'https://github.com/ofmooseandmen/wire'
+        inceptionYear '2018'
+
+        scm {
+            url 'https://github.com/ofmooseandmen/wire'
+            connection 'scm:https://ofmooseandmen@github.com/ofmooseandmen/wire.git'
+            developerConnection 'scm:git://github.com/ofmooseandmen/wire.git'
+        }
+
+        licenses {
+            license {
+                name 'The 3-Clause BSD License'
+                url 'https://opensource.org/licenses/BSD-3-Clause'
+                distribution 'repo'
+            }
+        }
+
+        developers {
+            developer {
+                id 'ofmooseandmen'
+                name 'Cedric Liegeois'
+                email 'ofmooseandmen@yahoo.com'
+            }
+        }
+    }
+}
+
+nexus {
+    sign = true
+    repositoryUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+    snapshotRepositoryUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+}
+
+task wrapper(type: Wrapper) {
+    description = 'Generates gradlew and gradlew.bat scripts'
+    gradleVersion = '4.6'
+    distributionType = Wrapper.DistributionType.BIN
+}

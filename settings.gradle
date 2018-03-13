@@ -1,0 +1,8 @@
+// Require Java 8 or higher
+int javaVersion = Integer.valueOf(JavaVersion.current().getMajorVersion())
+if (javaVersion < 8) {
+	throw new GradleException("The Wire build requires Java 8 or higher. " +
+		"Currently executing with Java " + javaVersion + ".")
+}
+
+rootProject.name = 'wire'

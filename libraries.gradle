@@ -1,0 +1,31 @@
+ext.libraries = [
+
+    halo: [
+        'com.github.ofmooseandmen:halo:2018.03.1'
+    ],
+    
+    protobuf: [
+        java  : 'com.google.protobuf:protobuf-java:3.5.1',
+        protoc: 'com.google.protobuf:protoc:3.5.1-1'
+    ],
+    
+    gson: [
+        'com.google.code.gson:gson:2.8.2'
+    ],
+    
+    cucumber: [
+        'io.cucumber:cucumber-java:2.4.0',
+        'io.cucumber:cucumber-junit:2.4.0',
+        'io.cucumber:cucumber-picocontainer:2.4.0',
+        'io.cucumber:tag-expressions:1.1.1'
+    ],
+
+    junit: [
+        'junit:junit:4.12'
+    ],
+
+    awaitility: [
+        'org.awaitility:awaitility:3.1.0'
+    ]
+
+]
