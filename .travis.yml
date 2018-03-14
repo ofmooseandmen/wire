@@ -1,22 +1,32 @@
 language: java
 
+# Get latest install-jdk.sh script
+before_install:
+  - wget https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
+
 matrix:
     include:
         - os: linux
           jdk: openjdk8
-          env: COVERAGE='false'
+          env: JDK='Open JDK 8'
         - os: linux
           jdk: oraclejdk8
-          env: COVERAGE='false'
+          env: JDK='Oracle JDK 8'
         - os: linux
           jdk: oraclejdk9
-          env: COVERAGE='true'
+          env: JDK='Oracle JDK 9'
+        - os: linux
+          install: . ./install-jdk.sh -F 10 -L BCL
+          env: JDK='Oracle JDK 10'
+        - os: linux
+          install: . ./install-jdk.sh -F 11 -L BCL
+          env: JDK='Oracle JDK 11'
         - os: osx
-          env: COVERAGE='false'
+          env: JDK='Unknown JDK'
 
 script:
   - ./gradlew -version
-  - ./gradlew assemble test --test io.omam.wire.WireEmulatedDeviceTestSuite jacocoTestReport --stacktrace
+  - ./gradlew assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite jacocoTestReport --stacktrace
 
 # Do not store unnecessary files from Gradle dependency cache
 before_cache:
@@ -31,5 +41,5 @@ cache:
  
  # Upload JaCoCo report to codecov   
 after_success:
-  - test "$COVERAGE" = "true" && bash <(curl -s https://codecov.io/bash) || true
-    
+  - test "${JDK}" = "Oracle JDK 9" && bash <(curl -s https://codecov.io/bash) || true
+
