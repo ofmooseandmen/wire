@@ -48,11 +48,17 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,22 +69,54 @@ import com.google.protobuf.ByteString;
 
 import io.omam.halo.Attributes;
 import io.omam.halo.Service;
+import io.omam.wire.AppAvailabilities.AppAvailability;
 import io.omam.wire.CastChannel.AuthError;
 import io.omam.wire.CastChannel.AuthError.ErrorType;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.CastChannel.DeviceAuthMessage;
 import io.omam.wire.CastDeviceVolume.VolumeControlType;
 import io.omam.wire.Payloads.Message;
+import io.omam.wire.ReceiverController.AppAvailabilityReq;
+import io.omam.wire.ReceiverController.AppAvailabilityResp;
+import io.omam.wire.ReceiverController.ApplicationData;
 import io.omam.wire.ReceiverController.CastDeviceVolumeData;
+import io.omam.wire.ReceiverController.Launch;
 import io.omam.wire.ReceiverController.ReceiverStatus;
 import io.omam.wire.ReceiverController.SetVolumeLevel;
 import io.omam.wire.ReceiverController.SetVolumeMuted;
+import io.omam.wire.ReceiverController.Stop;
 
 /**
  * An emulated Cast device that implements the Cast V2 Protocol an behaves as closely as possible as an real device
  * (audio) running 1.30 firmware.
  */
 final class EmulatedCastDevice implements AutoCloseable {
+
+    /**
+     * A {@link Consumer} that can throw {@link IOException}.
+     *
+     * @param <T> the type of the input to the operation
+     */
+    private static interface IoConsumer<T> extends Consumer<T> {
+
+        @Override
+        default void accept(final T t) {
+            try {
+                tryAccept(t);
+            } catch (final IOException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }
+
+        /**
+         * Performs this operation on the given argument and potentially throws an {@link IOException}.
+         *
+         * @param t the input argument
+         * @throws IOException in case of I/O error
+         */
+        void tryAccept(final T t) throws IOException;
+
+    }
 
     /** logger. */
     private static final Logger LOGGER = Logger.getLogger(EmulatedCastDevice.class.getName());
@@ -133,6 +171,9 @@ final class EmulatedCastDevice implements AutoCloseable {
     /** queue of received messages. */
     private final BlockingQueue<CastMessage> receivedMessages;
 
+    /** received message handlers. */
+    private final Map<String, IoConsumer<CastMessage>> handlers;
+
     /** server socket. */
     private final ServerSocket serverSocket;
 
@@ -148,6 +189,18 @@ final class EmulatedCastDevice implements AutoCloseable {
     /** {@code true} if communications with the client are suspended. */
     private boolean suspended;
 
+    /** whether the device was muted. */
+    private boolean muted;
+
+    /** last set volume level. */
+    private double level;
+
+    /** list of launched applications. */
+    private final Collection<ApplicationData> launched;
+
+    /** list of available applications. */
+    private final Collection<ApplicationData> avail;
+
     /**
      * Constructor.
      */
@@ -158,9 +211,22 @@ final class EmulatedCastDevice implements AutoCloseable {
             .ipv4Address(ADDR)
             .attributes(Attributes.create().with(FRIENDLY_NAME, NAME, StandardCharsets.UTF_8).get())
             .get();
+        receivedMessages = new LinkedBlockingQueue<>();
+        handlers = new HashMap<>();
+        handlers.put("PING", this::handlePing);
+        handlers.put("GET_STATUS", this::handleGetStatus);
+        handlers.put("SET_VOLUME", this::handleSetVolume);
+        handlers.put("LAUNCH", this::handleLaunch);
+        handlers.put("STOP", this::handleStop);
+        handlers.put("GET_APP_AVAILABILITY", this::handleGetAppAvailability);
+
         rejectAllAuthenticationRequests = false;
         suspended = false;
-        receivedMessages = new LinkedBlockingQueue<>();
+        muted = false;
+        level = 0.0;
+        launched = new ArrayList<>();
+        avail = new ArrayList<>();
+
         try {
             serverSocket = new ServerSocket();
             serverSocket.setReuseAddress(true);
@@ -238,6 +304,51 @@ final class EmulatedCastDevice implements AutoCloseable {
     }
 
     /**
+     * Handles a received GET_APP_AVAILABILITY message by sending back the application(s) availability.
+     *
+     * @param message message
+     * @throws IOException in case of I/O error
+     */
+    private void handleGetAppAvailability(final CastMessage message) throws IOException {
+        final Collection<String> ids =
+                parse(message, AppAvailabilityReq.class).map(AppAvailabilityReq::appId).orElseThrow(
+                        IOException::new);
+        final Map<String, AppAvailability> resp = new HashMap<>();
+        for (final String id : ids) {
+            final boolean isAvail = avail.stream().anyMatch(a -> a.id().equals(id));
+            resp.put(id, isAvail ? AppAvailability.APP_AVAILABLE : AppAvailability.APP_NOT_AVAILABLE);
+        }
+        respond(message, build(RECEIVER_NS, message.getSourceId(), new AppAvailabilityResp(resp)));
+    }
+
+    /**
+     * Handles a received GET_DEVICE_STATUS message by sending back a DEVICE_STATUS.
+     *
+     * @param message message
+     * @throws IOException in case of I/O error
+     */
+    private void handleGetStatus(final CastMessage message) throws IOException {
+        respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
+    }
+
+    /**
+     * Handles a received LAUNCH message by sending back a DEVICE_STATUS.
+     *
+     * @param message message
+     * @throws IOException in case of I/O error
+     */
+    private void handleLaunch(final CastMessage message) throws IOException {
+        final String appId = parse(message, Launch.class).map(Launch::appId).orElseThrow(IOException::new);
+        final String sessionId = UUID.randomUUID().toString();
+        final String transportId = "transport-" + UUID.randomUUID().toString();
+        final ApplicationData app = new ApplicationData(appId, appId, false, false, Collections.emptyList(),
+                                                        sessionId, "", transportId);
+        launched.add(app);
+        avail.add(app);
+        respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
+    }
+
+    /**
      * Handles messages from the client: try to respond when appropriate.
      *
      * @throws IOException in case of I/O error
@@ -261,20 +372,14 @@ final class EmulatedCastDevice implements AutoCloseable {
                         .setPayloadBinary(resp)
                         .build();
                     send(msg);
-                } else if (is(message, "PING")) {
-                    send(build(HEARTBEAT_NS, message.getSourceId(), new Message("PONG")));
-                } else if (is(message, "GET_STATUS")) {
-                    respond(message, build(RECEIVER_NS, message.getSourceId(), new ReceiverStatus(Collections
-                        .emptyList(), new CastDeviceVolumeData(VolumeControlType.MASTER, 0.0, false, 0.1))));
-                } else if (is(message, "SET_VOLUME")) {
-                    final boolean muted =
-                            parse(message, SetVolumeMuted.class).map(SetVolumeMuted::isMuted).orElse(false);
-                    final double level =
-                            parse(message, SetVolumeLevel.class).map(SetVolumeLevel::level).orElse(0.0);
-                    respond(message, build(RECEIVER_NS, message.getSourceId(), new ReceiverStatus(Collections
-                        .emptyList(), new CastDeviceVolumeData(VolumeControlType.MASTER, level, muted, 0.1))));
                 } else if (is(message, "CLOSE")) {
                     break;
+                } else {
+                    final String type =
+                            parse(message, Message.class).map(Message::type).orElseThrow(IOException::new);
+                    handlers.getOrDefault(type, t -> {
+                        // empty, no specific processing.
+                    }).accept(message);
                 }
             }
         } catch (final SocketException e) {
@@ -284,14 +389,70 @@ final class EmulatedCastDevice implements AutoCloseable {
             LOGGER.log(Level.FINE, "Connection closed", e);
         } finally {
             try {
-                suspended = false;
+
                 rejectAllAuthenticationRequests = false;
+                suspended = false;
+                muted = false;
+                level = 0.0;
+                launched.clear();
+                avail.clear();
+
                 socket.close();
             } catch (final IOException e) {
                 LOGGER.log(Level.WARNING, "I/O error when closing socket", e);
             }
             socket = null;
         }
+    }
+
+    /**
+     * Handles a received PING message by sending back a PONG.
+     *
+     * @param message message
+     * @throws IOException in case of I/O error
+     */
+    private void handlePing(final CastMessage message) throws IOException {
+        send(build(HEARTBEAT_NS, message.getSourceId(), new Message("PONG")));
+    }
+
+    /**
+     * Handles a received SET_VOLUME message by sending back a DEVICE_STATUS.
+     *
+     * @param message message
+     * @throws IOException in case of I/O error
+     */
+    private void handleSetVolume(final CastMessage message) throws IOException {
+        muted = parse(message, SetVolumeMuted.class).map(SetVolumeMuted::isMuted).orElse(false);
+        level = parse(message, SetVolumeLevel.class).map(SetVolumeLevel::level).orElse(0.0);
+        respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
+    }
+
+    /**
+     * Handles a received STOP message by sending back a DEVICE_STATUS.
+     *
+     * @param message message
+     * @throws IOException in case of I/O error
+     */
+    private void handleStop(final CastMessage message) throws IOException {
+        final String sessionId = parse(message, Stop.class).map(Stop::sessionId).orElseThrow(IOException::new);
+        final Optional<ApplicationData> optApp =
+                launched.stream().filter(a -> a.sessionId().equals(sessionId)).findFirst();
+        if (optApp.isPresent()) {
+            final ApplicationData app = optApp.get();
+            launched.remove(app);
+            respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
+            send(build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
+        } else {
+            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("INVALID_REQUEST")));
+        }
+    }
+
+    /**
+     * @return a receiver status build with the current status.
+     */
+    private ReceiverStatus receiverStatus() {
+        return new ReceiverStatus(new ArrayList<>(launched),
+                                  new CastDeviceVolumeData(VolumeControlType.MASTER, level, muted, 0.1));
     }
 
     /**

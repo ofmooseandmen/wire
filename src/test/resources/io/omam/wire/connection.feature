@@ -47,4 +47,5 @@ Feature: Interfacing with the device to handle connection
     Given the connection with the device has been opened
     When the device becomes unresponsive
     Then the connection shall be closed after "PT4S"
-    And the device controller listener is notified that the connection is dead
+    And the device controller listener shall be notified of the following events:
+      | CONNECTION_DEAD |

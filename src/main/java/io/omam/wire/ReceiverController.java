@@ -56,6 +56,153 @@ import io.omam.wire.Payloads.Message;
 final class ReceiverController implements ChannelListener {
 
     /**
+     * Application(s) availability request.
+     */
+    static final class AppAvailabilityReq extends Message {
+
+        /** ID of each application. */
+        private final Collection<String> appId;
+
+        /**
+         * Constructor.
+         *
+         * @param someAppId ID of each application
+         */
+        AppAvailabilityReq(final Collection<String> someAppId) {
+            super("GET_APP_AVAILABILITY");
+            appId = someAppId;
+        }
+
+        /**
+         * @return the ID of each application.
+         */
+        final Collection<String> appId() {
+            return appId;
+        }
+
+    }
+
+    /**
+     * Application(s) availability response.
+     */
+    static final class AppAvailabilityResp extends Message implements AppAvailabilities {
+
+        /** application availability indexed by application ID. */
+        private final Map<String, AppAvailability> availability;
+
+        /**
+         * Constructor.
+         * 
+         * @param someAvailability application availability indexed by application ID
+         */
+        AppAvailabilityResp(final Map<String, AppAvailability> someAvailability) {
+            availability = someAvailability;
+        }
+
+        @Override
+        public final Map<String, AppAvailability> availabilities() {
+            return availability == null ? Collections.emptyMap() : Collections.unmodifiableMap(availability);
+        }
+
+    }
+
+    /**
+     * Received applications.
+     */
+    static final class ApplicationData implements Application {
+
+        /** {@link #id()}. */
+        private final String appId;
+
+        /** {@link #name()}. */
+        private final String displayName;
+
+        /** {@link #isIdleScreen()}. */
+        private final boolean isIdleScreen;
+
+        /** {@link #launchedFromCloud()}. */
+        private final boolean launchedFromCloud;
+
+        /** {@link #namespaces()}. */
+        private final Collection<NamespaceData> namespaces;
+
+        /** {@link #sessionId()}. */
+        private final String sessionId;
+
+        /** {@link #statusText()}. */
+        private final String statusText;
+
+        /** {@link #transportId()}. */
+        private final String transportId;
+
+        /**
+         * Constructor.
+         *
+         * @param anAppId {@link #id()}
+         * @param aDisplayName {@link #name()}
+         * @param idleScreen {@link #isIdleScreen()}
+         * @param isLaunchedFromCloud {@link #launchedFromCloud()}
+         * @param someNamespaces {@link #namespaces()}
+         * @param aSessionId {@link #sessionId()}
+         * @param aStatusText {@link #statusText()}
+         * @param aTransportId {@link #transportId()}
+         */
+        ApplicationData(final String anAppId, final String aDisplayName, final boolean idleScreen,
+                final boolean isLaunchedFromCloud, final Collection<NamespaceData> someNamespaces,
+                final String aSessionId, final String aStatusText, final String aTransportId) {
+            appId = anAppId;
+            displayName = aDisplayName;
+            isIdleScreen = idleScreen;
+            launchedFromCloud = isLaunchedFromCloud;
+            namespaces = someNamespaces;
+            sessionId = aSessionId;
+            statusText = aStatusText;
+            transportId = aTransportId;
+        }
+
+        @Override
+        public final String id() {
+            return appId;
+        }
+
+        @Override
+        public final boolean isIdleScreen() {
+            return isIdleScreen;
+        }
+
+        @Override
+        public final boolean launchedFromCloud() {
+            return launchedFromCloud;
+        }
+
+        @Override
+        public final String name() {
+            return displayName;
+        }
+
+        @Override
+        public final Collection<Namespace> namespaces() {
+            return Collections.unmodifiableCollection(namespaces);
+        }
+
+        @Override
+        public final String sessionId() {
+            return sessionId;
+        }
+
+        @Override
+        public final String statusText() {
+            return statusText;
+        }
+
+        @Override
+        public final String transportId() {
+            return transportId;
+        }
+
+    }
+
+    /**
      * Received device volume.
      */
     static final class CastDeviceVolumeData implements CastDeviceVolume {
@@ -106,6 +253,33 @@ final class ReceiverController implements ChannelListener {
         @Override
         public final double stepInterval() {
             return stepInterval;
+        }
+
+    }
+
+    /**
+     * Launch application request.
+     */
+    static final class Launch extends Message {
+
+        /** application ID. */
+        private final String appId;
+
+        /**
+         * Constructor.
+         *
+         * @param anAppId application ID
+         */
+        Launch(final String anAppId) {
+            super("LAUNCH");
+            appId = anAppId;
+        }
+
+        /**
+         * @return the application ID.
+         */
+        final String appId() {
+            return appId;
         }
 
     }
@@ -211,129 +385,28 @@ final class ReceiverController implements ChannelListener {
     }
 
     /**
-     * Application(s) availability request.
+     * Stop application request.
      */
-    private static final class AppAvailabilityReq extends Message {
+    static final class Stop extends Message {
 
-        /** ID of each application. */
-        @SuppressWarnings("unused")
-        private final Collection<String> appId;
+        /** application session ID. */
+        private final String sessionId;
 
         /**
          * Constructor.
          *
-         * @param someAppId ID of each application
+         * @param aSessionId application session ID
          */
-        AppAvailabilityReq(final Collection<String> someAppId) {
-            super("GET_APP_AVAILABILITY");
-            appId = someAppId;
+        Stop(final String aSessionId) {
+            super("STOP");
+            sessionId = aSessionId;
         }
 
-    }
-
-    /**
-     * Application(s) availability response.
-     */
-    private static final class AppAvailabilityResp extends Message implements AppAvailabilities {
-
-        /** application availability indexed by application name. */
-        private Map<String, AppAvailability> availability;
-
-        @Override
-        public final Map<String, AppAvailability> availabilities() {
-            return availability == null ? Collections.emptyMap() : Collections.unmodifiableMap(availability);
-        }
-
-    }
-
-    /**
-     * Received applications.
-     */
-    private static final class ApplicationData implements Application {
-
-        /** {@link #id()}. */
-        private String appId;
-
-        /** {@link #name()}. */
-        private String displayName;
-
-        /** {@link #isIdleScreen()}. */
-        private boolean isIdleScreen;
-
-        /** {@link #launchedFromCloud()}. */
-        private boolean launchedFromCloud;
-
-        /** {@link #namespaces()}. */
-        private Collection<NamespaceData> namespaces;
-
-        /** {@link #sessionId()}. */
-        private String sessionId;
-
-        /** {@link #statusText()}. */
-        private String statusText;
-
-        /** {@link #transportId()}. */
-        private String transportId;
-
-        @Override
-        public final String id() {
-            return appId;
-        }
-
-        @Override
-        public final boolean isIdleScreen() {
-            return isIdleScreen;
-        }
-
-        @Override
-        public final boolean launchedFromCloud() {
-            return launchedFromCloud;
-        }
-
-        @Override
-        public final String name() {
-            return displayName;
-        }
-
-        @Override
-        public final Collection<Namespace> namespaces() {
-            return Collections.unmodifiableCollection(namespaces);
-        }
-
-        @Override
-        public final String sessionId() {
+        /**
+         * @return the application session ID.
+         */
+        final String sessionId() {
             return sessionId;
-        }
-
-        @Override
-        public final String statusText() {
-            return statusText;
-        }
-
-        @Override
-        public final String transportId() {
-            return transportId;
-        }
-
-    }
-
-    /**
-     * Launch application request.
-     */
-    private static final class Launch extends Message {
-
-        /** application ID. */
-        @SuppressWarnings("unused")
-        private final String appId;
-
-        /**
-         * Constructor.
-         *
-         * @param anAppId application ID
-         */
-        Launch(final String anAppId) {
-            super("LAUNCH");
-            appId = anAppId;
         }
 
     }
@@ -372,27 +445,6 @@ final class ReceiverController implements ChannelListener {
          */
         final CastDeviceVolume volume() {
             return volume;
-        }
-
-    }
-
-    /**
-     * Stop application request.
-     */
-    private static final class Stop extends Message {
-
-        /** application session ID. */
-        @SuppressWarnings("unused")
-        private final String sessionId;
-
-        /**
-         * Constructor.
-         *
-         * @param aSessionId application session ID
-         */
-        Stop(final String aSessionId) {
-            super("STOP");
-            sessionId = aSessionId;
         }
 
     }

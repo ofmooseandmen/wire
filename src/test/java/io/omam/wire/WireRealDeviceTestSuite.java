@@ -47,7 +47,6 @@ import cucumber.api.junit.Cucumber;
  * <p>
  * This test suite is intended to be run on the CI where obviously no real Cast device is available: an idle Cast
  * device with must be reachable on the local network in order for the tests of this suite to pass.
- *
  */
 @RunWith(Cucumber.class)
 @CucumberOptions(monochrome = true, dryRun = false, strict = true, tags = { "@RealDevice" }, plugin = {}, features = {})

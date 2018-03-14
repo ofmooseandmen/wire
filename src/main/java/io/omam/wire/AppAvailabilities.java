@@ -48,11 +48,11 @@ public interface AppAvailabilities {
     }
 
     /**
-     * Returns application availability indexed by application name.
+     * Returns application availability indexed by application ID.
      * <p>
      * The returned map is <strong>unmodifiable</strong>
      *
-     * @return application availability indexed by application name
+     * @return application availability indexed by application ID
      */
     Map<String, AppAvailability> availabilities();
 

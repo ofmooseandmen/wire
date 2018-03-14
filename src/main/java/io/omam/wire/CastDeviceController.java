@@ -71,8 +71,10 @@ public interface CastDeviceController extends AutoCloseable {
     void addListener(final CastDeviceControllerListener listener);
 
     /**
-     * Request and returns the availability of the given applications. An application is available only if it has
-     * been launched and therefore running.
+     * Request and returns the availability of the given applications.
+     * <p>
+     * TODO confirm: In order for an application to be detected as available it must have been launched at least
+     * once.
      *
      * @param appIds ID of each application
      * @return the availability of the given applications, never null
@@ -86,8 +88,10 @@ public interface CastDeviceController extends AutoCloseable {
     }
 
     /**
-     * Request and returns the availability of the given applications. An application is available only if it has
-     * been launched and therefore running.
+     * Request and returns the availability of the given applications.
+     * <p>
+     * TODO confirm: In order for an application to be detected as available it must have been launched at least
+     * once.
      *
      * @param appIds ID of each application
      * @param timeout response timeout
@@ -159,7 +163,10 @@ public interface CastDeviceController extends AutoCloseable {
     CastDeviceStatus deviceStatus(final Duration timeout) throws IOException, TimeoutException;
 
     /**
-     * Determines whether the given application is available (i.e. running) on the device.
+     * Determines whether the given application is available on the device.
+     * <p>
+     * TODO confirm: In order for an application to be detected as available it must have been launched at least
+     * once.
      *
      * @param appId application id
      * @return {@code true} if the given application is available on the device
@@ -172,7 +179,10 @@ public interface CastDeviceController extends AutoCloseable {
     }
 
     /**
-     * Determines whether the given application is available (i.e. running) on the device.
+     * Determines whether the given application is available on the device.
+     * <p>
+     * TODO confirm: In order for an application to be detected as available it must have been launched at least
+     * once.
      *
      * @param appId application id
      * @param timeout response timeout

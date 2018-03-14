@@ -35,6 +35,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.time.Instant;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import cucumber.api.Scenario;
 import cucumber.api.java.After;
@@ -56,7 +57,9 @@ public final class ScenarioSteps {
      */
     @After(order = 1)
     public final void after(final Scenario scenario) {
-        assertTrue(rt().events().isEmpty());
+        assertTrue("Expected events to be empty but was ["
+            + rt().events().stream().map(e -> e.type().toString()).collect(Collectors.joining(", "))
+            + "]", rt().events().isEmpty());
         rt().controller().close();
         LOGGER.info(() -> "Scenario '"
             + scenario.getName()
