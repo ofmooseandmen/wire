@@ -60,10 +60,12 @@ test {
     testLogging.showStandardStreams = true
 }
 
-jacocoTestReport {
-    reports {
-        xml.enabled true
-        html.enabled true
+if (project.hasProperty('enableJaCoCo')) {
+    jacocoTestReport {
+        reports {
+            xml.enabled true
+            html.enabled true
+        }
     }
 }
 
