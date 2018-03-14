@@ -30,7 +30,7 @@ matrix:
 
 script:
   - ./gradlew -version
-  - ./gradlew assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite --stacktrace
+  - ./gradlew --stacktrace --warning-mode=all ${EXTRA_GRADLE_ARGS} assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite
 
 # Do not store unnecessary files from Gradle dependency cache
 before_cache:
