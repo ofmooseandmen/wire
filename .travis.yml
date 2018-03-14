@@ -1,5 +1,9 @@
 language: java
 
+# Get latest install-jdk.sh script
+before_install:
+  - wget https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
+
 matrix:
     include:
         - os: linux
@@ -11,6 +15,12 @@ matrix:
         - os: linux
           jdk: oraclejdk9
           env: COVERAGE='true'
+        - os: linux
+          install: . ./install-jdk.sh -F 10 -L BCL
+          env: COVERAGE='false'
+        - os: linux
+          install: . ./install-jdk.sh -F 11 -L BCL
+          env: COVERAGE='false'
         - os: osx
           env: COVERAGE='false'
 
@@ -32,4 +42,4 @@ cache:
  # Upload JaCoCo report to codecov   
 after_success:
   - test "$COVERAGE" = "true" && bash <(curl -s https://codecov.io/bash) || true
-    
+
