@@ -7,4 +7,4 @@ install:
 
 test_script:
   - gradlew --no-daemon -version
-  - gradlew --no-daemon assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite jacocoTestReport --stacktrace
+  - gradlew --no-daemon assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite --stacktrace

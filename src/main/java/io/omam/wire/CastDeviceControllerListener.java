@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire;
 
 /**
- * The listener interface for receiving events from a Cast device.
+ * The listener interface for receiving <strong>unsolicited</strong> events from a Cast device.
  *
  * @see CastDeviceController
  */

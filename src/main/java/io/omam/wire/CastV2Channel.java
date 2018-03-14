@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -169,7 +170,7 @@ final class CastV2Channel implements AutoCloseable {
                 } catch (final IOException e) {
                     LOGGER.log(Level.WARNING, "I/O error while sending message", e);
                 } catch (final InterruptedException e) {
-                    LOGGER.log(Level.FINE, "Interrupted while waiting to message", e);
+                    LOGGER.log(Level.FINE, "Interrupted while waiting to send message", e);
                     Thread.currentThread().interrupt();
                 }
             }
@@ -300,7 +301,7 @@ final class CastV2Channel implements AutoCloseable {
     }
 
     /**
-     * Closes the socket.
+     * Closes the socket and await for the termination of the background tasks
      */
     private void closeSocket() {
         try {
@@ -310,6 +311,18 @@ final class CastV2Channel implements AutoCloseable {
         } finally {
             socket = null;
         }
+
+        es.shutdownNow();
+        try {
+            if (!es.awaitTermination(1, TimeUnit.SECONDS)) {
+                LOGGER.warning(() -> "Channel tasks not completed after shutdown");
+            }
+        } catch (final InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Interrupted while waiting for scheduler termination", e);
+            Thread.currentThread().interrupt();
+        }
+        es = null;
+
     }
 
     /**
@@ -339,7 +352,7 @@ final class CastV2Channel implements AutoCloseable {
     }
 
     /**
-     * Shutdowns background sender and receiver.
+     * Cancels background sender and receiver and shutdown executor.
      */
     private void shutdown() {
         sq.clear();
@@ -351,7 +364,6 @@ final class CastV2Channel implements AutoCloseable {
             receiver.cancel(true);
             receiver = null;
         }
-        es.shutdownNow();
-        es = null;
+        es.shutdown();
     }
 }
