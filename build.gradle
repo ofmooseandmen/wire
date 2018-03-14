@@ -22,8 +22,10 @@ repositories {
     mavenCentral()
 }
 
-apply plugin: 'jacoco'
-jacoco { toolVersion = '0.8.0' }
+if (project.hasProperty('enableJaCoCo')) {
+    apply plugin: 'jacoco'
+    jacoco { toolVersion = '0.8.0' }
+}
 
 apply plugin: 'java'
 apply plugin: 'eclipse'

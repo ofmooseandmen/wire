@@ -1,3 +1,4 @@
+# this file is greatly inspired by https://github.com/junit-team/junit5/blob/master/.travis.yml
 language: java
 
 # Get latest install-jdk.sh script
@@ -14,7 +15,7 @@ matrix:
           env: JDK='Oracle JDK 8'
         - os: linux
           jdk: oraclejdk9
-          env: JDK='Oracle JDK 9'
+          env: JDK='Oracle JDK 9' EXTRA_GRADLE_ARGS='-PenableJaCoCo'
         - os: linux
           install: . ./install-jdk.sh -F 10 -L BCL
           env: JDK='Oracle JDK 10'
@@ -26,7 +27,7 @@ matrix:
 
 script:
   - ./gradlew -version
-  - ./gradlew assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite jacocoTestReport --stacktrace
+  - ./gradlew assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite --stacktrace
 
 # Do not store unnecessary files from Gradle dependency cache
 before_cache:
@@ -41,5 +42,6 @@ cache:
  
  # Upload JaCoCo report to codecov   
 after_success:
+  - test "${JDK}" = "Oracle JDK 9" && ./gradlew -PenableJaCoCo jacocoRootReport || true
   - test "${JDK}" = "Oracle JDK 9" && bash <(curl -s https://codecov.io/bash) || true
 
