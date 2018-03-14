@@ -45,6 +45,6 @@ cache:
  
  # Upload JaCoCo report to codecov   
 after_success:
-  - test "${JDK}" = "Open JDK 9" && ./gradlew -PenableJaCoCo jacocoRootReport || true
+  - test "${JDK}" = "Open JDK 9" && ./gradlew -PenableJaCoCo jacocoTestReport || true
   - test "${JDK}" = "Open JDK 9" && bash <(curl -s https://codecov.io/bash) || true
 
