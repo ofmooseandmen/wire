@@ -16,7 +16,7 @@ matrix:
 
 script:
   - ./gradlew -version
-  - ./gradlew assemble test --test io.omam.wire.WireEmulatedDeviceTestSuite jacocoTestReport --stacktrace
+  - ./gradlew assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite jacocoTestReport --stacktrace
 
 # Do not store unnecessary files from Gradle dependency cache
 before_cache:
