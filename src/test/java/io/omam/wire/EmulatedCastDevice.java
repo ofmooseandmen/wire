@@ -350,10 +350,8 @@ final class EmulatedCastDevice implements AutoCloseable {
 
     /**
      * Handles messages from the client: try to respond when appropriate.
-     *
-     * @throws IOException in case of I/O error
      */
-    private void handleMessages() throws IOException {
+    private void handleMessages() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 final InputStream is = socket.getInputStream();
@@ -382,14 +380,15 @@ final class EmulatedCastDevice implements AutoCloseable {
                     }).accept(message);
                 }
             }
-        } catch (final SocketException e) {
+        } catch (final Exception e) {
             /*
-             * socket closed, exit and await for next connection
+             * consider socket closed, exit and await for next connection
              */
-            LOGGER.log(Level.FINE, "Connection closed", e);
+            LOGGER.log(Level.FINE, "Connection closed after exception", e);
         } finally {
             try {
 
+                LOGGER.fine(() -> "Closing socket");
                 rejectAllAuthenticationRequests = false;
                 suspended = false;
                 muted = false;

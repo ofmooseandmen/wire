@@ -301,7 +301,7 @@ final class CastV2Channel implements AutoCloseable {
     }
 
     /**
-     * Closes the socket.
+     * Closes the socket and await for the termination of the background tasks
      */
     private void closeSocket() {
         try {
@@ -311,6 +311,18 @@ final class CastV2Channel implements AutoCloseable {
         } finally {
             socket = null;
         }
+
+        es.shutdownNow();
+        try {
+            if (!es.awaitTermination(1, TimeUnit.SECONDS)) {
+                LOGGER.warning(() -> "Channel tasks not completed after shutdown");
+            }
+        } catch (final InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Interrupted while waiting for scheduler termination", e);
+            Thread.currentThread().interrupt();
+        }
+        es = null;
+
     }
 
     /**
@@ -340,7 +352,7 @@ final class CastV2Channel implements AutoCloseable {
     }
 
     /**
-     * Shutdowns background sender and receiver.
+     * Cancels background sender and receiver and shutdown executor.
      */
     private void shutdown() {
         sq.clear();
@@ -352,13 +364,6 @@ final class CastV2Channel implements AutoCloseable {
             receiver.cancel(true);
             receiver = null;
         }
-        es.shutdownNow();
-        try {
-            es.awaitTermination(1, TimeUnit.SECONDS);
-        } catch (final InterruptedException e) {
-            LOGGER.log(Level.WARNING, "Interrupted while waiting for scheduler termination", e);
-            Thread.currentThread().interrupt();
-        }
-        es = null;
+        es.shutdown();
     }
 }
