@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -169,7 +170,7 @@ final class CastV2Channel implements AutoCloseable {
                 } catch (final IOException e) {
                     LOGGER.log(Level.WARNING, "I/O error while sending message", e);
                 } catch (final InterruptedException e) {
-                    LOGGER.log(Level.FINE, "Interrupted while waiting to message", e);
+                    LOGGER.log(Level.FINE, "Interrupted while waiting to send message", e);
                     Thread.currentThread().interrupt();
                 }
             }
@@ -352,6 +353,12 @@ final class CastV2Channel implements AutoCloseable {
             receiver = null;
         }
         es.shutdownNow();
+        try {
+            es.awaitTermination(1, TimeUnit.SECONDS);
+        } catch (final InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Interrupted while waiting for scheduler termination", e);
+            Thread.currentThread().interrupt();
+        }
         es = null;
     }
 }

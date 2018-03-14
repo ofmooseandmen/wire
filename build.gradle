@@ -57,6 +57,7 @@ protobuf {
 }
 
 test {
+    forkEvery = 1
     testLogging.showStandardStreams = true
 }
 
