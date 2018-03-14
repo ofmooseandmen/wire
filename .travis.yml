@@ -14,16 +14,19 @@ matrix:
           jdk: oraclejdk8
           env: JDK='Oracle JDK 8'
         - os: linux
+          install: . ./install-jdk.sh -F 9
+          env: JDK='Open JDK 9' EXTRA_GRADLE_ARGS='-PenableJaCoCo'
+        - os: linux
           jdk: oraclejdk9
-          env: JDK='Oracle JDK 9' EXTRA_GRADLE_ARGS='-PenableJaCoCo'
+          env: JDK='Oracle JDK 9'
+        - os: linux
+          install: . ./install-jdk.sh -F 10
+          env: JDK='Open JDK 10'
         - os: linux
           install: . ./install-jdk.sh -F 10 -L BCL
           env: JDK='Oracle JDK 10'
-        - os: linux
-          install: . ./install-jdk.sh -F 11 -L BCL
-          env: JDK='Oracle JDK 11'
         - os: osx
-          env: JDK='Unknown JDK'
+          env: JDK='Unknown JDK (8+)'
 
 script:
   - ./gradlew -version
@@ -42,6 +45,6 @@ cache:
  
  # Upload JaCoCo report to codecov   
 after_success:
-  - test "${JDK}" = "Oracle JDK 9" && ./gradlew -PenableJaCoCo jacocoRootReport || true
-  - test "${JDK}" = "Oracle JDK 9" && bash <(curl -s https://codecov.io/bash) || true
+  - test "${JDK}" = "Open JDK 9" && ./gradlew -PenableJaCoCo jacocoRootReport || true
+  - test "${JDK}" = "Open JDK 9" && bash <(curl -s https://codecov.io/bash) || true
 
