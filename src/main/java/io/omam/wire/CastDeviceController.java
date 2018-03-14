@@ -71,29 +71,32 @@ public interface CastDeviceController extends AutoCloseable {
     void addListener(final CastDeviceControllerListener listener);
 
     /**
-     * Request and returns the availability of the given applications.
+     * Request and returns the availability of the given applications. An application is available only if it has
+     * been launched and therefore running.
      *
-     * @param ids ID of each application
+     * @param appIds ID of each application
      * @return the availability of the given applications, never null
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the default timeout has elapsed before the availability of the given
      *             applications was received
      */
-    default AppAvailabilities appsAvailability(final Collection<String> ids) throws IOException, TimeoutException {
-        return appsAvailability(ids, REQUEST_TIMEOUT);
+    default AppAvailabilities appsAvailability(final Collection<String> appIds)
+            throws IOException, TimeoutException {
+        return appsAvailability(appIds, REQUEST_TIMEOUT);
     }
 
     /**
-     * Request and returns the availability of the given applications.
+     * Request and returns the availability of the given applications. An application is available only if it has
+     * been launched and therefore running.
      *
-     * @param ids ID of each application
+     * @param appIds ID of each application
      * @param timeout response timeout
      * @return the availability of the given applications, never null
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
      *             received
      */
-    AppAvailabilities appsAvailability(final Collection<String> ids, final Duration timeout)
+    AppAvailabilities appsAvailability(final Collection<String> appIds, final Duration timeout)
             throws IOException, TimeoutException;
 
     /**
@@ -156,30 +159,31 @@ public interface CastDeviceController extends AutoCloseable {
     CastDeviceStatus deviceStatus(final Duration timeout) throws IOException, TimeoutException;
 
     /**
-     * Determines whether the given application is available on the device.
+     * Determines whether the given application is available (i.e. running) on the device.
      *
-     * @param id application id
+     * @param appId application id
      * @return {@code true} if the given application is available on the device
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the default timeout has elapsed before the availability of the given
      *             applications was received
      */
-    default boolean isAppAvailable(final String id) throws IOException, TimeoutException {
-        return isAppAvailable(id, REQUEST_TIMEOUT);
+    default boolean isAppAvailable(final String appId) throws IOException, TimeoutException {
+        return isAppAvailable(appId, REQUEST_TIMEOUT);
     }
 
     /**
-     * Determines whether the given application is available on the device.
+     * Determines whether the given application is available (i.e. running) on the device.
      *
-     * @param id application id
+     * @param appId application id
      * @param timeout response timeout
      * @return {@code true} if the given application is available on the device
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
      *             received
      */
-    default boolean isAppAvailable(final String id, final Duration timeout) throws IOException, TimeoutException {
-        return appsAvailability(Arrays.asList(id), timeout).availabilities().getOrDefault(id,
+    default boolean isAppAvailable(final String appId, final Duration timeout)
+            throws IOException, TimeoutException {
+        return appsAvailability(Arrays.asList(appId), timeout).availabilities().getOrDefault(appId,
                 AppAvailability.APP_NOT_AVAILABLE) == AppAvailability.APP_AVAILABLE;
     }
 

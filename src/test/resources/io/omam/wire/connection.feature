@@ -17,6 +17,7 @@ Feature: Interfacing with the device to handle connection
       | urn:x-cast:com.google.cast.tp.deviceauth | AUTH    |
       | urn:x-cast:com.google.cast.tp.heartbeat  | PING    |
       | urn:x-cast:com.google.cast.tp.connection | CONNECT |
+    And the connection shall be opened
 
   @EmulatedDevice
   Scenario: Authentication error

@@ -39,8 +39,11 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
+import cucumber.api.java.After;
+import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
 import cucumber.api.java.en.When;
+import io.omam.wire.CastChannel.CastMessage;
 
 /**
  * Steps to control applications on the device.
@@ -48,12 +51,49 @@ import cucumber.api.java.en.When;
 @SuppressWarnings("javadoc")
 public final class ReceiverSteps {
 
+    private static final class FakeAppController extends StandardApplicationController {
+
+        protected FakeAppController(final Application someDetails) {
+            super(someDetails);
+        }
+
+        @Override
+        protected final void appMessageReceived(final CastMessage message) {
+            // ignore.
+        }
+
+    }
+
     private final Exceptions exs;
 
     private CastDeviceStatus status;
 
+    private FakeAppController app;
+
     public ReceiverSteps(final Exceptions exceptions) {
         exs = exceptions;
+    }
+
+    @After
+    public final void after() throws IOException, TimeoutException {
+        if (app != null) {
+            rt().controller().stopApp(app);
+        }
+    }
+
+    @Given("^the application \"(\\w+)\" has been launched")
+    public final void givenApplicationLaunched(final String appId) {
+        whenApplicationLaunched(appId);
+    }
+
+    @Then("^the application \"(\\w+)\" is (not )?running on the device$")
+    public final void thenApplicationRunning(final String appId, final String not) {
+        try {
+            final boolean avail = rt().controller().isAppAvailable(appId);
+            assertEquals(!not.equals("not "), avail);
+        } catch (IOException | TimeoutException e) {
+            exs.thrown(e);
+        }
     }
 
     @Then("^the received device status shall report a muted volume$")
@@ -78,6 +118,26 @@ public final class ReceiverSteps {
     public final void thenDeviceStatusVolumeLevel(final double level) {
         assertNotNull(status);
         assertEquals(level, status.volume().level(), 1e-10);
+    }
+
+    @When("^the application \"(\\w+)\" is requested to be launched")
+    public final void whenApplicationLaunched(final String appId) {
+        try {
+            app = rt().controller().launchApp(appId, FakeAppController::new);
+        } catch (final IOException | TimeoutException e) {
+            exs.thrown(e);
+        }
+    }
+
+    @When("^the application \"(\\w+)\" is requested to be stopped")
+    public final void whenApplicationStopped(final String appId) {
+        try {
+            assertNotNull(app);
+            assertEquals(appId, app.details().id());
+            status = rt().controller().stopApp(app);
+        } catch (final IOException | TimeoutException e) {
+            exs.thrown(e);
+        }
     }
 
     @When("^the device is requested to be muted$")

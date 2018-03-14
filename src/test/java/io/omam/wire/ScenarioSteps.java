@@ -54,7 +54,7 @@ public final class ScenarioSteps {
      *
      * @param scenario scenario
      */
-    @After
+    @After(order = 1)
     public final void after(final Scenario scenario) {
         assertTrue(rt().events().isEmpty());
         rt().controller().close();

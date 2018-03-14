@@ -30,8 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-import static io.omam.wire.Bytes.toBytes;
-import static io.omam.wire.Bytes.toInt;
 import static io.omam.wire.CastV2Protocol.DEFAULT_RECEIVER_ID;
 import static io.omam.wire.CastV2Protocol.FRIENDLY_NAME;
 import static io.omam.wire.CastV2Protocol.REGISTRATION_TYPE;
@@ -248,8 +246,8 @@ final class EmulatedCastDevice implements AutoCloseable {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 final InputStream is = socket.getInputStream();
-                final int size = readSize(is);
-                final CastMessage message = readMsg(is, size);
+                final CastMessage message = CastMessageCodec.read(is).orElseThrow(
+                        () -> new IOException("Could not read received message"));
                 receivedMessages.add(message);
                 if (message.getNamespace().equals(AUTH_NS)) {
                     final ByteString resp = rejectAllAuthenticationRequests ? AUTH_ERR : AUTH_OK;
@@ -297,49 +295,6 @@ final class EmulatedCastDevice implements AutoCloseable {
     }
 
     /**
-     * Reads the given number bytes from the given input stream and returns a new Cast message.
-     *
-     * @param is input stream
-     * @param size number of bytes to read
-     * @return a new Cast message
-     * @throws IOException in case of I/O error
-     */
-    // FIXME: make a IO class in src/main
-    private CastMessage readMsg(final InputStream is, final int size) throws IOException {
-        final byte[] buf = new byte[size];
-        int read = 0;
-        while (read < size) {
-            final int readLen = is.read(buf, read, buf.length - read);
-            if (readLen == -1) {
-                throw new SocketException("Could not read message");
-            }
-            read += readLen;
-        }
-        return CastMessage.parseFrom(buf);
-    }
-
-    /**
-     * Reads the 4 first bytes from the given input stream: this is the size of the message.
-     *
-     * @param is input stream
-     * @return size of message
-     * @throws IOException in case of I/O error
-     */
-    // FIXME: make a IO class in src/main
-    private int readSize(final InputStream is) throws IOException {
-        final byte[] buf = new byte[4];
-        int read = 0;
-        while (read < buf.length) {
-            final int nextByte = is.read();
-            if (nextByte == -1) {
-                throw new SocketException("Could not read size");
-            }
-            buf[read++] = (byte) nextByte;
-        }
-        return toInt(buf);
-    }
-
-    /**
      * Responds to the given request with the given response.
      *
      * @param request request
@@ -362,11 +317,9 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @param message message to send
      * @throws IOException in case of I/O error
      */
-    // FIXME: make a IO class in src/main
     private void send(final CastMessage message) throws IOException {
         if (!suspended) {
-            socket.getOutputStream().write(toBytes(message.getSerializedSize()));
-            message.writeTo(socket.getOutputStream());
+            CastMessageCodec.write(message, socket.getOutputStream());
         }
     }
 

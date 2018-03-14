@@ -32,6 +32,7 @@ package io.omam.wire;
 
 import static io.omam.wire.ScenarioRuntime.rt;
 import static org.awaitility.Awaitility.await;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -65,6 +66,11 @@ public final class ConnectionSteps {
     public void thenConnectionClosed(final String duration) {
         await().atLeast(Duration.parse(duration).toMillis(), TimeUnit.MILLISECONDS).until(
                 () -> !rt().controller().isConnected());
+    }
+
+    @Then("^the connection shall be opened$")
+    public final void thenConnectionOpened() {
+        assertTrue(rt().controller().isConnected());
     }
 
     @Then("^the device controller listener is notified that the connection is dead$")

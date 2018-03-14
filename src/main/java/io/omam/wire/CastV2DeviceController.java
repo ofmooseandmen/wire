@@ -77,10 +77,10 @@ final class CastV2DeviceController implements CastDeviceController {
     }
 
     @Override
-    public final AppAvailabilities appsAvailability(final Collection<String> ids, final Duration timeout)
+    public final AppAvailabilities appsAvailability(final Collection<String> appIds, final Duration timeout)
             throws IOException, TimeoutException {
         ensureConnected();
-        return receiver.appAvailability(ids, timeout);
+        return receiver.appAvailability(appIds, timeout);
     }
 
     @Override

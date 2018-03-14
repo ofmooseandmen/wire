@@ -6,8 +6,6 @@
  */
 package io.omam.wire;
 
-import static io.omam.wire.Bytes.toBytes;
-import static io.omam.wire.Bytes.toInt;
 import static io.omam.wire.CastV2Protocol.USE_TLS;
 
 import java.io.IOException;
@@ -123,7 +121,7 @@ final class CastV2Channel implements AutoCloseable {
                 try {
                     final InputStream is = socket.getInputStream();
                     /* 4 first bytes is size of message. */
-                    final Optional<CastMessage> optMsg = readMsg(is);
+                    final Optional<CastMessage> optMsg = CastMessageCodec.read(is);
                     if (optMsg.isPresent()) {
                         final CastMessage msg = optMsg.get();
                         LOGGER.fine(() -> "Received message [" + msg + "]");
@@ -141,49 +139,6 @@ final class CastV2Channel implements AutoCloseable {
             }
         }
 
-        /**
-         * Reads the next Cast message from the given input stream.
-         *
-         * @param is input stream
-         * @return a new Cast message or empty if the end of the stream has been reached
-         * @throws IOException in case of I/O error
-         */
-        private Optional<CastMessage> readMsg(final InputStream is) throws IOException {
-            final int size = readSize(is);
-            if (size == -1) {
-                return Optional.empty();
-            }
-            final byte[] buf = new byte[size];
-            int read = 0;
-            while (read < size) {
-                final int readLen = is.read(buf, read, buf.length - read);
-                if (readLen == -1) {
-                    return Optional.empty();
-                }
-                read += readLen;
-            }
-            return Optional.of(CastMessage.parseFrom(buf));
-        }
-
-        /**
-         * Reads the 4 first bytes from the given input stream: this is the size of the message.
-         *
-         * @param is input stream
-         * @return size of message or {@code -1} if the end of the stream has been reached
-         * @throws IOException in case of I/O error
-         */
-        private int readSize(final InputStream is) throws IOException {
-            final byte[] buf = new byte[4];
-            int read = 0;
-            while (read < buf.length) {
-                final int nextByte = is.read();
-                if (nextByte == -1) {
-                    return -1;
-                }
-                buf[read++] = (byte) nextByte;
-            }
-            return toInt(buf);
-        }
     }
 
     /**
@@ -379,10 +334,7 @@ final class CastV2Channel implements AutoCloseable {
      */
     private void doSend(final CastMessage message) throws IOException {
         LOGGER.fine(() -> "Sending message [" + message + "]");
-        /* first the size of the message. */
-        socket.getOutputStream().write(toBytes(message.getSerializedSize()));
-        /* then the message itself. */
-        message.writeTo(socket.getOutputStream());
+        CastMessageCodec.write(message, socket.getOutputStream());
         LOGGER.fine(() -> "Sent message [" + message + "]");
     }
 

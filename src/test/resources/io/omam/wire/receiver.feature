@@ -25,3 +25,17 @@ Feature: Interfacing with the receiver to control applications
     Given the connection with the device has been opened
     When the device is requested to be unmuted
     Then the received device status shall report an umuted volume
+
+  # this test launches the default media receiver application which is always installed on the device.
+  @EmulatedDevice @RealDevice
+  Scenario: Launch application
+    Given the connection with the device has been opened
+    When the application "CC1AD845" is requested to be launched
+    Then the application "CC1AD845" is running on the device
+
+  @EmulatedDevice @RealDevice
+  Scenario: Stop application
+    Given the connection with the device has been opened
+    And the application "CC1AD845" has been launched
+    When the application "CC1AD845" is requested to be stopped
+    Then the application "CC1AD845" is not running on the device
