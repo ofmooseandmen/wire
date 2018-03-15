@@ -189,7 +189,65 @@ public interface MediaStatus {
      *      Reference: QueueItem</a>
      */
     public static interface QueueItem {
-        // TODO
+
+        /**
+         * Returns the ID of each active track.
+         *
+         * @return the ID of each active track
+         */
+        List<Integer> activeTracksIds();
+
+        /**
+         * Whether the media player will begin playing the element in the queue when the item becomes current.
+         *
+         * @return {@code true} if the media player will begin playing the element in the queue when the item
+         *         becomes current
+         */
+        boolean autoplay();
+
+        /**
+         * Returns extra queue item information defined by the application.
+         *
+         * @return extra queue item information defined by the application
+         */
+        Object customData();
+
+        /**
+         * Returns the unique identifier of the item in the queue.
+         *
+         * @return the unique identifier of the item in the queue
+         */
+        int itemId();
+
+        /**
+         * Returns the metadata of the playlist element.
+         *
+         * @return the metadata of the playlist element
+         */
+        MediaInformation media();
+
+        /**
+         * Returns the playback duration of the item.
+         *
+         * @return the playback duration of the item
+         */
+        Duration playbackDuration();
+
+        /**
+         * Returns the time relative to the beginning of this item playback at which the item shall be preloaded to
+         * allow for smooth transition between items.
+         *
+         * @return preload time relative to the beginning of this item playback
+         */
+        Duration preloadTime();
+
+        /**
+         * Returns the duration since the beginning of content.
+         *
+         * @return the duration since the beginning of content
+         */
+        Duration startTime();
+
     }
 
     /**
@@ -237,7 +295,7 @@ public interface MediaStatus {
     List<Integer> activeTrackIds();
 
     /**
-     * Return the status of break, if receiver is playing break.
+     * Returns the status of break, if receiver is playing break.
      *
      * @return the status of break or {@code empty} if receiver is not playing break
      */
@@ -258,7 +316,7 @@ public interface MediaStatus {
     int currentTime();
 
     /**
-     * Return the extended media status information.
+     * Returns the extended media status information.
      *
      * @return the extended media status information
      */
@@ -323,12 +381,12 @@ public interface MediaStatus {
     PlayerState playerState();
 
     /**
-     * Return ID of the next Item.
+     * Returns ID of the next Item.
      * <p>
      * Media items can be preloaded and cached temporarily in memory, so when they are loaded later on, the process
      * is faster (as the media does not have to be fetched from the network).
      *
-     * @return Return ID of the next Item or {@code empty} if next item has not been preloaded
+     * @return the ID of the next Item or {@code empty} if next item has not been preloaded
      */
     Optional<Integer> preloadedItemId();
 

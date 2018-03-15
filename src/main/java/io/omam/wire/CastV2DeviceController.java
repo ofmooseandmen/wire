@@ -35,7 +35,6 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * {@link CastDeviceController} implementing the CAST V2 protocol.
@@ -94,6 +93,17 @@ final class CastV2DeviceController implements CastDeviceController {
     }
 
     @Override
+    public final String deviceName() {
+        return name;
+    }
+
+    @Override
+    public final CastDeviceStatus deviceStatus(final Duration timeout) throws IOException, TimeoutException {
+        ensureConnected();
+        return receiver.receiverStatus(timeout);
+    }
+
+    @Override
     public final boolean isConnected() {
         return connection.isOpened();
     }
@@ -105,14 +115,8 @@ final class CastV2DeviceController implements CastDeviceController {
         ensureConnected();
         final CastDeviceStatus status = receiver.launch(appId, timeout);
         final Collection<Application> apps = status.applications();
-        final Application app = apps
-            .stream()
-            .filter(a -> a.id().equals(appId))
-            .findFirst()
-            .orElseThrow(() -> new IOException("Received status does not contain "
-                + appId
-                + " details: "
-                + apps.stream().map(Application::id).collect(Collectors.joining(", "))));
+        final Application app = apps.stream().filter(a -> a.id().equals(appId)).findFirst().orElseThrow(
+                () -> new IOException("Received status does not contain application [" + appId + "]"));
         final T ctrl = controllerSupplier.apply(app);
         ctrl.setChannel(channel);
         return ctrl;
@@ -122,11 +126,6 @@ final class CastV2DeviceController implements CastDeviceController {
     public final CastDeviceStatus muteDevice(final Duration timeout) throws IOException, TimeoutException {
         ensureConnected();
         return receiver.mute(timeout);
-    }
-
-    @Override
-    public final String deviceName() {
-        return name;
     }
 
     @Override
@@ -140,12 +139,6 @@ final class CastV2DeviceController implements CastDeviceController {
             throws IOException, TimeoutException {
         ensureConnected();
         return receiver.setVolume(level, timeout);
-    }
-
-    @Override
-    public final CastDeviceStatus deviceStatus(final Duration timeout) throws IOException, TimeoutException {
-        ensureConnected();
-        return receiver.receiverStatus(timeout);
     }
 
     @Override

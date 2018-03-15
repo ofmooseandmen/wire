@@ -339,13 +339,18 @@ final class EmulatedCastDevice implements AutoCloseable {
      */
     private void handleLaunch(final CastMessage message) throws IOException {
         final String appId = parse(message, Launch.class).map(Launch::appId).orElseThrow(IOException::new);
-        final String sessionId = UUID.randomUUID().toString();
-        final String transportId = "transport-" + UUID.randomUUID().toString();
-        final ApplicationData app = new ApplicationData(appId, appId, false, false, Collections.emptyList(),
-                                                        sessionId, "", transportId);
-        launched.add(app);
-        avail.add(app);
-        respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
+        /* just support the default media app. */
+        if (appId.equals(MediaController.APP_ID)) {
+            final String sessionId = UUID.randomUUID().toString();
+            final String transportId = "transport-" + UUID.randomUUID().toString();
+            final ApplicationData app = new ApplicationData(appId, appId, false, false, Collections.emptyList(),
+                                                            sessionId, "", transportId);
+            launched.add(app);
+            avail.add(app);
+            respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
+        } else {
+            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("LAUNCH_ERROR")));
+        }
     }
 
     /**

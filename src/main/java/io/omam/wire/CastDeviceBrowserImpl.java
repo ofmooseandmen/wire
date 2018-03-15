@@ -91,7 +91,7 @@ final class CastDeviceBrowserImpl implements CastDeviceBrowser {
             final String name = service.attributes().value(FRIENDLY_NAME, StandardCharsets.UTF_8).orElseGet(
                     service::instanceName);
             if (address == null) {
-                LOGGER.warning(() -> "Ignored Google Cast ["
+                LOGGER.warning(() -> "Ignored Cast Device ["
                     + service.instanceName()
                     + "] as it does not report its IP address");
             } else {
@@ -101,7 +101,7 @@ final class CastDeviceBrowserImpl implements CastDeviceBrowser {
                     clients.put(service.name().toLowerCase(), client);
                     l.up(client);
                 } catch (final GeneralSecurityException e) {
-                    LOGGER.log(Level.WARNING, e, () -> "Ignored Google Cast [" + service.instanceName() + "]");
+                    LOGGER.log(Level.WARNING, e, () -> "Ignored Cast Device [" + service.instanceName() + "]");
                 }
             }
         }

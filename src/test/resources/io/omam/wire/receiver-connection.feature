@@ -1,4 +1,4 @@
-Feature: Interfacing with the device to handle connection
+Feature: Interfacing with the receiver to handle connection
   
     The connection with a device is established through the "urn:x-cast:com.google.cast.tp.connection" namespace/protocol.
     The connection is kept alive by exchanging PING/PONG message on the "urn:x-cast:com.google.cast.tp.heartbeat" namespace/protocol.
