@@ -34,7 +34,6 @@ import static io.omam.wire.Payloads.parse;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 
 import io.omam.wire.CastChannel.CastMessage;
@@ -65,12 +64,6 @@ public abstract class StandardApplicationController extends ApplicationControlle
      */
     protected StandardApplicationController(final Application someDetails) {
         super(someDetails, STD_RESP_PREDICATE);
-    }
-
-    @SuppressWarnings("javadoc")
-    protected final CastMessage request(final CastMessage request, final Duration timeout)
-            throws TimeoutException {
-        return newStandardRequestor().request(request, timeout);
     }
 
 }

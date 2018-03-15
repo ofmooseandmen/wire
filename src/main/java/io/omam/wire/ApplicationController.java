@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire;
 
 import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
@@ -44,7 +45,7 @@ import io.omam.wire.CastChannel.CastMessage;
  * @see CastDeviceController#launchApp(String, java.util.function.Function, java.time.Duration)
  * @see CastDeviceController#stopApp(ApplicationController, Duration)
  */
-abstract class ApplicationController implements ChannelListener {
+public abstract class ApplicationController implements ChannelListener {
 
     /** the details of this application. */
     private final Application details;
@@ -105,22 +106,36 @@ abstract class ApplicationController implements ChannelListener {
     protected abstract void appMessageReceived(final CastMessage message);
 
     /**
-     * Returns a new {@link Requestor}.
+     * Sends the given request and await for a correlated response using the given correlator.
      *
-     * @param correlator request/response correlator
-     * @return a new {@link Requestor}
+     * @param request request
+     * @param correlator a {@code BiPredicate} that accepts a request and a received message and returns
+     *            {@code true} if that latter is correlated with the request
+     * @param timeout response timeout
+     * @return received response
+     * @throws TimeoutException if the timeout elapsed before the response was received
      */
-    protected final Requestor newRequestor(final BiPredicate<CastMessage, CastMessage> correlator) {
+    protected final CastMessage request(final CastMessage request,
+            final BiPredicate<CastMessage, CastMessage> correlator, final Duration timeout)
+            throws TimeoutException {
         ensureNotStopped();
-        return new Requestor(channel, correlator);
+        return new Requestor(channel, correlator).request(request, timeout);
     }
 
     /**
-     * @return a new {@link StandardRequestor}.
+     * Sends the given request and await for a correlated response using the standard request ID mechanism.
+     * <p>
+     * This method assumes that both the request and response JSON payload contain a {@code requestId} attribute.
+     *
+     * @param request request
+     * @param timeout response timeout
+     * @return received response
+     * @throws TimeoutException if the timeout elapsed before the response was received
      */
-    protected final StandardRequestor newStandardRequestor() {
+    protected final CastMessage request(final CastMessage request, final Duration timeout)
+            throws TimeoutException {
         ensureNotStopped();
-        return new StandardRequestor(channel);
+        return new StandardRequestor(channel).request(request, timeout);
     }
 
     /**
