@@ -41,12 +41,26 @@ import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
+import io.omam.halo.Browser;
 import io.omam.wire.AppAvailabilities.AppAvailability;
 
 /**
  * A client to connect and interact with a Cast device.
  */
 public interface CastDeviceController extends AutoCloseable {
+
+    /**
+     * Browses the network for Cast devices and notifies changes in their availability to the given listener.
+     * <p>
+     * Cast devices already notified to the listener are not {@link #close() closed}, when the browser is closed.
+     *
+     * @param listener the listener to be notified when a Cast device availability changes
+     * @return a {@link Browser} to terminate the browsing operation
+     * @throws IOException in case of I/O error
+     */
+    static Browser browse(final CastDeviceBrowserListener listener) throws IOException {
+        return new CastDeviceBrowser(listener);
+    }
 
     /**
      * Returns a new controller implementing the CAST V2 protocol.

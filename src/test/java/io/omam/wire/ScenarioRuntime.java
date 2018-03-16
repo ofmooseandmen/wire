@@ -40,6 +40,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import io.omam.halo.Browser;
 import io.omam.halo.Halo;
 import io.omam.halo.Service;
 
@@ -193,7 +194,7 @@ final class ScenarioRuntime implements CastDeviceControllerListener {
                 }
             }
         };
-        try (final CastDeviceBrowser browser = CastDeviceBrowser.browse(l)) {
+        try (final Browser browser = CastDeviceController.browse(l)) {
             await().atMost(10, TimeUnit.SECONDS).until(() -> ctrl != null);
             setup = true;
         }

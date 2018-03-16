@@ -30,31 +30,106 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
+import static io.omam.wire.CastV2Protocol.FRIENDLY_NAME;
+import static io.omam.wire.CastV2Protocol.REGISTRATION_TYPE;
+
 import java.io.IOException;
+import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.time.Clock;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import io.omam.halo.Browser;
+import io.omam.halo.Halo;
+import io.omam.halo.Service;
+import io.omam.halo.ServiceBrowserListener;
 
 /**
  * Browser to discover Cast devices on the local domain of the network.
  */
-public interface CastDeviceBrowser extends AutoCloseable {
+final class CastDeviceBrowser implements Browser {
 
     /**
-     * Browses the network for Cast devices and notifies changes in their availability to the given listener.
-     *
-     * @param listener the listener to be notified when a Cast device availability changes
-     * @return a new {@link CastDeviceBrowser browser}
-     * @throws IOException in case of I/O error
+     * {@link ServiceBrowserListener} that notifies a browser.
      */
-    static CastDeviceBrowser browse(final CastDeviceBrowserListener listener) throws IOException {
-        return new CastDeviceBrowserImpl(listener);
+    private static final class Listener implements ServiceBrowserListener {
+
+        /** logger. */
+        private static final Logger LOGGER = Logger.getLogger(Listener.class.getName());
+
+        /** all discovered clients indexed by service name. */
+        private final Map<String, CastDeviceController> clients;
+
+        /** listener to notify. */
+        private final CastDeviceBrowserListener l;
+
+        /**
+         * Constructor.
+         *
+         * @param listener browser to notify
+         */
+        Listener(final CastDeviceBrowserListener listener) {
+            clients = new ConcurrentHashMap<>();
+            l = listener;
+        }
+
+        @Override
+        public final void down(final Service service) {
+            final CastDeviceController client = clients.remove(service.name().toLowerCase());
+            if (client != null) {
+                l.down(client);
+            }
+        }
+
+        @Override
+        public final void up(final Service service) {
+            final InetAddress address = service.ipv4Address().orElseGet(() -> service.ipv6Address().orElse(null));
+            final String name = service.attributes().value(FRIENDLY_NAME, StandardCharsets.UTF_8).orElseGet(
+                    service::instanceName);
+            if (address == null) {
+                LOGGER.warning(() -> "Ignored Cast Device ["
+                    + service.instanceName()
+                    + "] as it does not report its IP address");
+            } else {
+                final int port = service.port();
+                try {
+                    final CastDeviceController client = CastDeviceController.v2(name, address, port);
+                    clients.put(service.name().toLowerCase(), client);
+                    l.up(client);
+                } catch (final GeneralSecurityException e) {
+                    LOGGER.log(Level.WARNING, e, () -> "Ignored Cast Device [" + service.instanceName() + "]");
+                }
+            }
+        }
+
     }
 
+    /** halo. */
+    private final Halo halo;
+
+    /** cast browser. */
+    private final Browser browser;
+
     /**
-     * Closes this browser.
-     * <p>
-     * Stops browsing for Cast devices, Cast devices already notified to the listener are not
-     * {@link CastDeviceController#close() closed}.
+     * Constructor.
+     *
+     * @param listener listener
+     * @throws IOException in case of I/O error
      */
+    CastDeviceBrowser(final CastDeviceBrowserListener listener) throws IOException {
+        halo = Halo.allNetworkInterfaces(Clock.systemDefaultZone());
+        final ServiceBrowserListener l = new Listener(listener);
+        browser = halo.browse(REGISTRATION_TYPE, l);
+    }
+
     @Override
-    void close();
+    public final void close() {
+        browser.close();
+        halo.close();
+    }
 
 }
