@@ -36,6 +36,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import cucumber.api.java.en.Given;
@@ -73,7 +74,7 @@ public final class EmulatedCastDeviceSteps {
             assertEquals(msg.getNamespace(), expected.namespace());
             if (!expected.type().equals("AUTH")) {
                 final Message parsed = parse(msg, Message.class).orElseThrow(UNPARSABLE);
-                assertEquals(parsed.type(), expected.type());
+                assertEquals(parsed.type(), Optional.of(expected.type()));
             }
         }
     }

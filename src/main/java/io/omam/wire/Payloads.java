@@ -54,11 +54,17 @@ final class Payloads {
 
     /**
      * Base class of all CAST V2 messages with a {@code PayloadType.STRING} payload.
+     * <p>
+     * Depending on the message either {@link #type()} or {@link #responseType()} is present. Note that some
+     * response contain {@link #type()} instead of {@link #responseType()}.
      */
     static class Message {
 
-        /** message type. */
+        /** message type, or null if response. */
         private final String type;
+
+        /** response type, or null if message or request. */
+        private final String responseType;
 
         /** request ID, null or 0 when not a request. */
         private final Integer requestId;
@@ -67,16 +73,18 @@ final class Payloads {
          * Constructor.
          */
         Message() {
-            this(null);
+            this(null, null);
         }
 
         /**
          * Constructor.
          *
          * @param aType type
+         * @param aResponseType response type
          */
-        Message(final String aType) {
+        Message(final String aType, final String aResponseType) {
             type = aType;
+            responseType = aResponseType;
             requestId = null;
         }
 
@@ -88,10 +96,17 @@ final class Payloads {
         }
 
         /**
-         * @return the message type.
+         * @return the response type, if present.
          */
-        final String type() {
-            return type;
+        final Optional<String> responseType() {
+            return Optional.ofNullable(responseType);
+        }
+
+        /**
+         * @return the message type, if present.
+         */
+        final Optional<String> type() {
+            return Optional.ofNullable(type);
         }
 
     }
@@ -172,7 +187,7 @@ final class Payloads {
      * @return {@code true} if given message has the given type
      */
     static boolean is(final CastMessage msg, final String type) {
-        return GSON.fromJson(msg.getPayloadUtf8(), Message.class).type().equals(type);
+        return GSON.fromJson(msg.getPayloadUtf8(), Message.class).type().map(t -> t.equals(type)).orElse(false);
     }
 
     /**
@@ -187,11 +202,12 @@ final class Payloads {
         try {
             final String payload = msg.getPayloadUtf8();
             if (payload == null || payload.isEmpty()) {
+                LOGGER.warning(() -> "Could not parse null or empty payload");
                 return Optional.empty();
             }
             return Optional.of(GSON.fromJson(payload, clazz));
         } catch (final JsonSyntaxException e) {
-            LOGGER.log(Level.FINE, e,
+            LOGGER.log(Level.WARNING, e,
                     () -> "Could not parse [" + msg.getPayloadUtf8() + "] into an instance of Message");
             return Optional.empty();
         }

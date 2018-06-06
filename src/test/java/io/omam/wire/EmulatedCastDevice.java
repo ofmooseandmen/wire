@@ -349,7 +349,7 @@ final class EmulatedCastDevice implements AutoCloseable {
             avail.add(app);
             respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
         } else {
-            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("LAUNCH_ERROR")));
+            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("LAUNCH_ERROR", null)));
         }
     }
 
@@ -378,8 +378,9 @@ final class EmulatedCastDevice implements AutoCloseable {
                 } else if (is(message, "CLOSE")) {
                     break;
                 } else {
-                    final String type =
-                            parse(message, Message.class).map(Message::type).orElseThrow(IOException::new);
+                    final String type = parse(message, Message.class)
+                        .map(m -> m.responseType().orElseGet(() -> m.type().orElse(null)))
+                        .orElseThrow(IOException::new);
                     handlers.getOrDefault(type, t -> {
                         // empty, no specific processing.
                     }).accept(message);
@@ -416,7 +417,7 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @throws IOException in case of I/O error
      */
     private void handlePing(final CastMessage message) throws IOException {
-        send(build(HEARTBEAT_NS, message.getSourceId(), new Message("PONG")));
+        send(build(HEARTBEAT_NS, message.getSourceId(), new Message("PONG", null)));
     }
 
     /**
@@ -447,7 +448,7 @@ final class EmulatedCastDevice implements AutoCloseable {
             respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
             send(build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
         } else {
-            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("INVALID_REQUEST")));
+            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("INVALID_REQUEST", null)));
         }
     }
 

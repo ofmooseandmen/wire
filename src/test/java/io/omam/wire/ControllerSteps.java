@@ -107,7 +107,7 @@ public final class ControllerSteps {
                 assertNotNull(status);
                 assertTrue(status.applications().isEmpty());
             }
-        } catch (IOException | TimeoutException e) {
+        } catch (final IOException | TimeoutException e) {
             exs.thrown(e);
         }
     }

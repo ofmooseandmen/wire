@@ -32,6 +32,7 @@ package io.omam.wire;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -210,7 +211,7 @@ public interface MediaStatus {
          *
          * @return extra queue item information defined by the application
          */
-        Object customData();
+        Map<String, Object> customData();
 
         /**
          * Returns the unique identifier of the item in the queue.

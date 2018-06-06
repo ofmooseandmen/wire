@@ -69,7 +69,7 @@ final class ReceiverController implements ChannelListener {
          * @param someAppId ID of each application
          */
         AppAvailabilityReq(final Collection<String> someAppId) {
-            super("GET_APP_AVAILABILITY");
+            super("GET_APP_AVAILABILITY", null);
             appId = someAppId;
         }
 
@@ -92,10 +92,11 @@ final class ReceiverController implements ChannelListener {
 
         /**
          * Constructor.
-         * 
+         *
          * @param someAvailability application availability indexed by application ID
          */
         AppAvailabilityResp(final Map<String, AppAvailability> someAvailability) {
+            super(null, "GET_APP_AVAILABILITY");
             availability = someAvailability;
         }
 
@@ -271,7 +272,7 @@ final class ReceiverController implements ChannelListener {
          * @param anAppId application ID
          */
         Launch(final String anAppId) {
-            super("LAUNCH");
+            super("LAUNCH", null);
             appId = anAppId;
         }
 
@@ -314,7 +315,7 @@ final class ReceiverController implements ChannelListener {
          * @param aVolume volume
          */
         ReceiverStatus(final List<ApplicationData> someApplications, final CastDeviceVolumeData aVolume) {
-            super("GET_STATUS");
+            super("GET_STATUS", null);
             status = new ReceiverStatusData(someApplications, aVolume);
         }
 
@@ -344,7 +345,7 @@ final class ReceiverController implements ChannelListener {
          * @param level volume level
          */
         SetVolumeLevel(final double level) {
-            super("SET_VOLUME");
+            super("SET_VOLUME", null);
             volume = new VolumeLevel(level);
         }
 
@@ -371,7 +372,7 @@ final class ReceiverController implements ChannelListener {
          * @param isMuted volume muted?
          */
         SetVolumeMuted(final boolean isMuted) {
-            super("SET_VOLUME");
+            super("SET_VOLUME", null);
             volume = new VolumedMuted(isMuted);
         }
 
@@ -398,7 +399,7 @@ final class ReceiverController implements ChannelListener {
          * @param aSessionId application session ID
          */
         Stop(final String aSessionId) {
-            super("STOP");
+            super("STOP", null);
             sessionId = aSessionId;
         }
 
@@ -528,16 +529,6 @@ final class ReceiverController implements ChannelListener {
     }
 
     /**
-     * Returns a new message representing a receiver {@code STOP} request.
-     *
-     * @param sessionId the application session ID
-     * @return a new message representing a receiver {@code STOP} request
-     */
-    static CastMessage stop(final String sessionId) {
-        return build(RECEIVER_NS, new Stop(sessionId));
-    }
-
-    /**
      * Returns a new message representing a receiver {@code GET_APP_AVAILABILITY} request.
      *
      * @param appId ID of each application
@@ -553,7 +544,7 @@ final class ReceiverController implements ChannelListener {
      * @return a new message representing a receiver {@code GET_STATUS} request
      */
     private static CastMessage getReceiverStatus() {
-        return build(RECEIVER_NS, new Message("GET_STATUS"));
+        return build(RECEIVER_NS, new Message("GET_STATUS", null));
     }
 
     /**
@@ -564,6 +555,26 @@ final class ReceiverController implements ChannelListener {
      */
     private static CastMessage launch(final String appId) {
         return build(RECEIVER_NS, new Launch(appId));
+    }
+
+    /**
+     * Parses the content of the given {@code resp} into a message of the given type.
+     *
+     * @param <T> response type
+     * @param resp unparsed response
+     * @param clazz response class
+     * @return a new response of the given type
+     * @throws IOException if the response is an error
+     */
+    private static <T extends Message> T parseResponse(final CastMessage resp, final Class<T> clazz)
+            throws IOException {
+        final String type = parse(resp, Message.class)
+            .map(m -> m.responseType().orElseGet(() -> m.type().orElse(null)))
+            .orElseThrow(() -> new IOException("Could not parse received response type"));
+        if (ERRORS.contains(type)) {
+            throw new IOException(type);
+        }
+        return parse(resp, clazz).orElseThrow(() -> new IOException("Could not parse received response"));
     }
 
     /**
@@ -584,6 +595,16 @@ final class ReceiverController implements ChannelListener {
      */
     private static CastMessage setVolumeMuted(final boolean muted) {
         return build(RECEIVER_NS, new SetVolumeMuted(muted));
+    }
+
+    /**
+     * Returns a new message representing a receiver {@code STOP} request.
+     *
+     * @param sessionId the application session ID
+     * @return a new message representing a receiver {@code STOP} request
+     */
+    private static CastMessage stop(final String sessionId) {
+        return build(RECEIVER_NS, new Stop(sessionId));
     }
 
     @Override
@@ -622,8 +643,7 @@ final class ReceiverController implements ChannelListener {
     final AppAvailabilities appAvailability(final Collection<String> appIds, final Duration timeout)
             throws IOException, TimeoutException {
         final CastMessage resp = new StandardRequestor(channel).request(getAppAvailability(appIds), timeout);
-        return parse(resp, AppAvailabilityResp.class)
-            .orElseThrow(() -> new IOException("Could not parse received response"));
+        return parseResponse(resp, AppAvailabilityResp.class);
     }
 
     /**
@@ -638,7 +658,7 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus launch(final String appId, final Duration timeout)
             throws IOException, TimeoutException {
         final CastMessage resp = new StandardRequestor(channel).request(launch(appId), timeout);
-        return makeResponse(resp, ReceiverStatus.class);
+        return parseResponse(resp, ReceiverStatus.class);
     }
 
     /**
@@ -651,7 +671,7 @@ final class ReceiverController implements ChannelListener {
      */
     final CastDeviceStatus mute(final Duration timeout) throws IOException, TimeoutException {
         final CastMessage resp = new StandardRequestor(channel).request(setVolumeMuted(true), timeout);
-        return makeResponse(resp, ReceiverStatus.class);
+        return parseResponse(resp, ReceiverStatus.class);
     }
 
     /**
@@ -664,7 +684,7 @@ final class ReceiverController implements ChannelListener {
      */
     final CastDeviceStatus receiverStatus(final Duration timeout) throws IOException, TimeoutException {
         final CastMessage resp = new StandardRequestor(channel).request(getReceiverStatus(), timeout);
-        return makeResponse(resp, ReceiverStatus.class);
+        return parseResponse(resp, ReceiverStatus.class);
     }
 
     /**
@@ -688,7 +708,7 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus setVolume(final double level, final Duration timeout)
             throws IOException, TimeoutException {
         final CastMessage resp = new StandardRequestor(channel).request(setVolumeLevel(level), timeout);
-        return makeResponse(resp, ReceiverStatus.class);
+        return parseResponse(resp, ReceiverStatus.class);
     }
 
     /**
@@ -704,7 +724,7 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus stopApp(final String sessionId, final Duration timeout)
             throws IOException, TimeoutException {
         final CastMessage resp = new StandardRequestor(channel).request(stop(sessionId), timeout);
-        return makeResponse(resp, ReceiverStatus.class);
+        return parseResponse(resp, ReceiverStatus.class);
     }
 
     /**
@@ -717,25 +737,7 @@ final class ReceiverController implements ChannelListener {
      */
     final CastDeviceStatus unmute(final Duration timeout) throws IOException, TimeoutException {
         final CastMessage resp = new StandardRequestor(channel).request(setVolumeMuted(false), timeout);
-        return makeResponse(resp, ReceiverStatus.class);
-    }
-
-    /**
-     * Builds a new response of the given type or throws an {@link IOException} in case of erro.
-     *
-     * @param <T> response type
-     * @param resp unparsed response
-     * @param clazz response class
-     * @return a new response of the given type
-     * @throws IOException if the unparsed response is an error
-     */
-    private <T extends Message> T makeResponse(final CastMessage resp, final Class<T> clazz) throws IOException {
-        final String type = parse(resp, Message.class).map(Message::type).orElseThrow(
-                () -> new IOException("Could not parse received response type"));
-        if (ERRORS.contains(type)) {
-            throw new IOException(type);
-        }
-        return parse(resp, clazz).orElseThrow(() -> new IOException("Could not parse received response"));
+        return parseResponse(resp, ReceiverStatus.class);
     }
 
 }

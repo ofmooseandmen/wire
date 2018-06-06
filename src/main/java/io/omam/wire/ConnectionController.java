@@ -105,7 +105,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
          * @param aType type
          */
         Connection(final String aType) {
-            super(aType);
+            super(aType, null);
             origin = new Object();
         }
 
@@ -166,7 +166,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
             .setPayloadBinary(authMessage.toByteString())
             .build();
 
-        PING_MSG = build(HEARTBEAT_NS, new Message(PING));
+        PING_MSG = build(HEARTBEAT_NS, new Message(PING, null));
         CONNECT_MSG = build(CONNECTION_NS, new Connect());
         CLOSE_MSG = build(CONNECTION_NS, new Connection(CLOSE));
     }
@@ -220,7 +220,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
      * @return a new message representing a heartbeat {@code PONG}
      */
     private static CastMessage pong(final String destination) {
-        return build(HEARTBEAT_NS, destination, new Message(PONG));
+        return build(HEARTBEAT_NS, destination, new Message(PONG, null));
     }
 
     /**
