@@ -30,12 +30,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
+import java.util.Map;
+
 @SuppressWarnings("javadoc")
 final class ReceivedMessage {
 
-    private String namespace;
+    private final String namespace;
 
-    private String type;
+    private final String type;
+
+    ReceivedMessage(final Map<String, String> row) {
+        namespace = row.get("namespace");
+        type = row.get("type");
+    }
 
     @Override
     public final String toString() {

@@ -24,7 +24,7 @@ repositories {
 
 if (project.hasProperty('enableJaCoCo')) {
     apply plugin: 'jacoco'
-    jacoco { toolVersion = '0.8.0' }
+    jacoco { toolVersion = '0.8.1' }
 }
 
 apply plugin: 'java'
@@ -179,6 +179,6 @@ nexus {
 
 task wrapper(type: Wrapper) {
     description = 'Generates gradlew and gradlew.bat scripts'
-    gradleVersion = '4.6'
+    gradleVersion = '4.8'
     distributionType = Wrapper.DistributionType.BIN
 }

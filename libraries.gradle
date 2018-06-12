@@ -10,17 +10,18 @@ ext.libraries = [
     ],
     
     gson: [
-        'com.google.code.gson:gson:2.8.2'
+        'com.google.code.gson:gson:2.8.5'
     ],
     
     cucumber: [
-        'io.cucumber:cucumber-java:2.4.0',
-        'io.cucumber:cucumber-junit:2.4.0',
-        'io.cucumber:cucumber-picocontainer:2.4.0'
+        'io.cucumber:cucumber-java:3.0.2',
+        'io.cucumber:cucumber-java8:3.0.2',
+        'io.cucumber:cucumber-junit:3.0.2',
+        'io.cucumber:cucumber-picocontainer:3.0.2'
     ],
 
     junit: [
-        'junit:junit:4.12'
+        'org.junit.vintage:junit-vintage-engine:5.2.0'
     ],
 
     awaitility: [

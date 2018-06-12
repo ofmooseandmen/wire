@@ -30,50 +30,52 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-import static io.omam.wire.ScenarioRuntime.rt;
-import static org.junit.Assert.assertTrue;
+import static java.util.Arrays.stream;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.joining;
 
-import java.time.Instant;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import java.time.Duration;
+import java.util.Locale;
 
-import cucumber.api.java8.En;
+import cucumber.api.TypeRegistry;
+import cucumber.api.TypeRegistryConfigurer;
+import io.cucumber.cucumberexpressions.CaptureGroupTransformer;
+import io.cucumber.cucumberexpressions.ParameterType;
+import io.cucumber.datatable.DataTableType;
+import io.omam.wire.ScenarioRuntime.EventType;
 
 /**
- * Steps to log start/end of scenario.
+ * Type registry configuration for custom types used in step definitions.
  */
-public final class ScenarioSteps implements En {
-
-    /** logger. */
-    private static final Logger LOGGER = Logger.getLogger(ScenarioSteps.class.getName());
+public final class TypeRegistryConfiguration implements TypeRegistryConfigurer {
 
     /**
      * Constructor.
+     *
      */
-    public ScenarioSteps() {
+    public TypeRegistryConfiguration() {
+        // empty.
+    }
 
-        /*
-         * Logs start of scenario.
-         */
-        Before(scenario -> LOGGER.info(() -> "Scenario '" + scenario.getName() + "' started @ " + Instant.now()));
+    @Override
+    public final void configureTypeRegistry(final TypeRegistry typeRegistry) {
 
-        /*
-         * Closes the connection with the device and logs end of scenario and the most severe status of the
-         * scenario's steps.
-         */
-        After(1, scenario -> {
-            assertTrue("Expected events to be empty but was ["
-                + rt().events().stream().map(e -> e.type().toString()).collect(Collectors.joining(", "))
-                + "]", rt().events().isEmpty());
-            rt().controller().close();
-            LOGGER.info(() -> "Scenario '"
-                + scenario.getName()
-                + "' ended @ "
-                + Instant.now()
-                + " with status "
-                + scenario.getStatus());
-        });
+        typeRegistry.defineParameterType(
+                new ParameterType<>("duration", singletonList("PT[HMS0-9]."), Duration.class,
+                                    (CaptureGroupTransformer<Duration>) s -> Duration.parse(s[0])));
+
+        typeRegistry.defineParameterType(
+                new ParameterType<>("eventType",
+                                    stream(EventType.values()).map(EventType::toString).collect(joining("|")),
+                                    EventType.class,
+                                    (CaptureGroupTransformer<EventType>) s -> EventType.valueOf(s[0])));
+
+        typeRegistry.defineDataTableType(new DataTableType(ReceivedMessage.class, ReceivedMessage::new));
 
     }
 
+    @Override
+    public Locale locale() {
+        return Locale.ENGLISH;
+    }
 }

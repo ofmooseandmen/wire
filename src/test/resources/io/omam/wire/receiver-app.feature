@@ -16,5 +16,4 @@ Feature: Interfacing with the receiver to control applications
     And the application "CC1AD845" has been launched
     When the application "CC1AD845" is requested to be stopped
     Then the application "CC1AD845" shall be not running on the device
-    And the device controller listener shall be notified of the following events:
-      | DEVICE_STATUS |
+    And the device controller listener shall be notified of a DEVICE_STATUS event

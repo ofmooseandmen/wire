@@ -39,9 +39,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import cucumber.api.java.en.Given;
-import cucumber.api.java.en.Then;
-import cucumber.api.java.en.When;
+import cucumber.api.java8.En;
+import io.cucumber.datatable.DataTable;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.Payloads.Message;
 
@@ -49,39 +48,35 @@ import io.omam.wire.Payloads.Message;
  * Steps to control the behaviour and probe the state of the emulated Cast device.
  */
 @SuppressWarnings("javadoc")
-public final class EmulatedCastDeviceSteps {
+public final class EmulatedCastDeviceSteps implements En {
 
     private static final Supplier<AssertionError> UNPARSABLE =
             () -> new AssertionError("Received unparsable message");
 
     private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
-    @Given("^the device rejects all authentication requests$")
-    public final void givenDeviceRejectsAllAuthenticationRequests() {
-        rt().emulatedCastDevice().rejectAllAuthenticationRequests();
-    }
+    public EmulatedCastDeviceSteps() {
 
-    @Given("^the device has become unresponsive$")
-    public final void givenDeviceUnresponsive() {
-        whenDeviceUnresponsive();
-    }
+        Given("the device rejects all authentication requests",
+                () -> rt().emulatedCastDevice().rejectAllAuthenticationRequests());
 
-    @Then("^the following messages shall be received by the device:$")
-    public final void thenMessagesReceived(final List<ReceivedMessage> expecteds) throws InterruptedException {
-        for (final ReceivedMessage expected : expecteds) {
-            final CastMessage msg = rt().emulatedCastDevice().takeReceivedMessage(TIMEOUT).orElseThrow(
-                    () -> new AssertionError("Message " + expected + " was not received"));
-            assertEquals(msg.getNamespace(), expected.namespace());
-            if (!expected.type().equals("AUTH")) {
-                final Message parsed = parse(msg, Message.class).orElseThrow(UNPARSABLE);
-                assertEquals(parsed.type(), Optional.of(expected.type()));
+        Given("the device has become unresponsive", () -> rt().emulatedCastDevice().suspend());
+
+        Then("the device shall receive the following message(s):", (final DataTable dt) -> {
+            final List<ReceivedMessage> expecteds = dt.asList(ReceivedMessage.class);
+            for (final ReceivedMessage expected : expecteds) {
+                final CastMessage msg = rt().emulatedCastDevice().takeReceivedMessage(TIMEOUT).orElseThrow(
+                        () -> new AssertionError("Message " + expected + " was not received"));
+                assertEquals(msg.getNamespace(), expected.namespace());
+                if (!expected.type().equals("AUTH")) {
+                    final Message parsed = parse(msg, Message.class).orElseThrow(UNPARSABLE);
+                    assertEquals(parsed.type(), Optional.of(expected.type()));
+                }
             }
-        }
-    }
+        });
 
-    @When("^the device becomes unresponsive$")
-    public final void whenDeviceUnresponsive() {
-        rt().emulatedCastDevice().suspend();
+        When("the device becomes unresponsive", () -> rt().emulatedCastDevice().suspend());
+
     }
 
 }

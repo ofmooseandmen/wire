@@ -37,16 +37,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import cucumber.api.java.After;
-import cucumber.api.java.en.Given;
-import cucumber.api.java.en.Then;
-import cucumber.api.java.en.When;
+import cucumber.api.java8.En;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.ScenarioRuntime.Event;
 import io.omam.wire.ScenarioRuntime.EventType;
@@ -55,11 +49,11 @@ import io.omam.wire.ScenarioRuntime.EventType;
  * Steps to interact with the {@link CastDeviceController}.
  */
 @SuppressWarnings("javadoc")
-public final class ControllerSteps {
+public final class ControllerSteps implements En {
 
     private static final class FakeAppController extends StandardApplicationController {
 
-        protected FakeAppController(final Application someDetails) {
+        FakeAppController(final Application someDetails) {
             super(someDetails);
         }
 
@@ -70,171 +64,108 @@ public final class ControllerSteps {
 
     }
 
-    private final Exceptions exs;
+    @FunctionalInterface
+    private static interface ThrowingRunnable {
+
+        void run() throws Exception;
+    }
+
+    private Exceptions exs;
 
     private CastDeviceStatus status;
 
     private FakeAppController app;
 
     public ControllerSteps(final Exceptions exceptions) {
+
         exs = exceptions;
-    }
 
-    @After
-    public final void after() throws Exception {
-        if (app != null) {
-            rt().controller().stopApp(app);
-            /* the cast device sends a DEVICE_STATUS event when stopping an app. */
-            assertNotNull(rt().events().poll(1, TimeUnit.SECONDS));
-        }
-    }
-
-    @Given("^the application \"(\\w+)\" has been launched")
-    public final void givenApplicationLaunched(final String appId) {
-        whenApplicationLaunched(appId);
-    }
-
-    @Given("^the connection with the device has been opened$")
-    public final void givenDeviceConnectionOpened() {
-        whenConnectionOpened();
-    }
-
-    @Then("^the application \"(\\w+)\" shall be (not )?running on the device$")
-    public final void thenApplicationRunning(final String appId, final String not) {
-        try {
-            assertTrue(rt().controller().isAppAvailable(appId));
-            if (not != null) {
-                assertNotNull(status);
-                assertTrue(status.applications().isEmpty());
+        After(() -> {
+            if (app != null) {
+                rt().controller().stopApp(app);
+                /* the cast device sends a DEVICE_STATUS event when stopping an app. */
+                assertNotNull(rt().events().poll(1, TimeUnit.SECONDS));
             }
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        });
 
-    @Then("^the connection shall be closed after \"([^\"]*)\"$")
-    public void thenConnectionClosed(final String duration) {
-        await().atLeast(Duration.parse(duration).toMillis(), TimeUnit.MILLISECONDS).until(
-                () -> !rt().controller().isConnected());
-    }
+        Given("the application {string} has been launched", (final String appId) -> app =
+                exs.call(() -> rt().controller().launchApp(appId, FakeAppController::new)));
 
-    @Then("^the connection shall be opened$")
-    public final void thenConnectionOpened() {
-        assertTrue(rt().controller().isConnected());
-    }
+        Given("the connection with the device has been opened", () -> exs.run(() -> rt().controller().connect()));
 
-    @Then("^the device controller listener shall be notified of the following events:$")
-    public final void thenDeviceControllerListenerNotified(final List<EventType> expecteds) {
-        for (final EventType expected : expecteds) {
+        Then("the application {string} shall be running on the device",
+                (final String appId) -> exs.run(() -> assertTrue(rt().controller().isAppAvailable(appId))));
+
+        Then("the application {string} shall be not running on the device", (final String appId) -> exs.run(() -> {
+            assertTrue(rt().controller().isAppAvailable(appId));
+            assertNotNull(status);
+            assertTrue(status.applications().isEmpty());
+        }));
+
+        Then("the connection shall be opened", () -> {
+            assertTrue(rt().controller().isConnected());
+        });
+
+        Then("the connection shall be closed after {duration}", (final Duration dur) -> {
+            await().atLeast(dur.toMillis(), TimeUnit.MILLISECONDS).until(() -> !rt().controller().isConnected());
+        });
+
+        Then("the device controller listener shall be notified of a {eventType} event", (final EventType et) -> {
             await().atMost(1, TimeUnit.SECONDS).until(() -> {
                 final Event e = rt().events().poll();
-                return e != null && e.type() == expected;
+                return e != null && e.type() == et;
             });
-        }
-    }
+        });
 
-    @Then("^the received device status shall report a muted volume$")
-    public final void thenDeviceStatusMutedLevel() {
-        assertNotNull(status);
-        assertTrue(status.volume().isMuted());
-    }
+        Then("the received device status shall report a muted volume", () -> {
+            assertNotNull(status);
+            assertTrue(status.volume().isMuted());
+        });
 
-    @Then("^the received device status shall report no available application$")
-    public final void thenDeviceStatusNoApp() {
-        assertNotNull(status);
-        assertTrue(status.applications().isEmpty());
-    }
+        Then("the received device status shall report an umuted volume", () -> {
+            assertNotNull(status);
+            assertFalse(status.volume().isMuted());
+        });
 
-    @Then("^the received device status shall report an umuted volume$")
-    public final void thenDeviceStatusUmutedLevel() {
-        assertNotNull(status);
-        assertFalse(status.volume().isMuted());
-    }
+        Then("the received device status shall report no available application", () -> {
+            assertNotNull(status);
+            assertTrue(status.applications().isEmpty());
+        });
 
-    @Then("^the received device status shall report a volume level of (\\d+.\\d+)$")
-    public final void thenDeviceStatusVolumeLevel(final double level) {
-        assertNotNull(status);
-        assertEquals(level, status.volume().level(), 1e-10);
-    }
+        Then("the received device status shall report a volume level of {float}", (final Float level) -> {
+            assertNotNull(status);
+            assertEquals(level, status.volume().level(), 1e-10);
+        });
 
-    @When("^the application \"(\\w+)\" is requested to be launched")
-    public final void whenApplicationLaunched(final String appId) {
-        try {
-            app = rt().controller().launchApp(appId, FakeAppController::new);
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        When("the application {string} is requested to be launched", (final String appId) -> app =
+                exs.call(() -> rt().controller().launchApp(appId, FakeAppController::new)));
 
-    @When("^the application \"(\\w+)\" is requested to be stopped")
-    public final void whenApplicationStopped(final String appId) {
-        try {
-            assertNotNull(app);
-            assertEquals(appId, app.details().id());
-            status = rt().controller().stopApp(app);
+        When("the application {string} is requested to be stopped", (final String appId) -> {
+            status = exs.call(() -> {
+                assertNotNull(app);
+                assertEquals(appId, app.details().id());
+                return rt().controller().stopApp(app);
+            });
             app = null;
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        });
 
-    @When("^the connection is closed$")
-    public final void whenConnectionClosed() {
-        rt().controller().close();
-    }
+        When("the connection with the device is closed", () -> rt().controller().close());
 
-    @When("^the connection with the device is opened$")
-    public final void whenConnectionOpened() {
-        try {
-            rt().controller().connect();
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        When("the connection with the device is opened", () -> exs.run(() -> rt().controller().connect()));
 
-    @When("^the connection with the device is opened with a timeout of \"([^\"]*)\"$")
-    public void whenConnectionOpened(final String timeout) {
-        try {
-            rt().controller().connect(Duration.parse(timeout));
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        When("the connection with the device is opened with a timeout of {duration}",
+                (final Duration dur) -> exs.run(() -> rt().controller().connect(dur)));
 
-    @When("^the device is requested to be muted$")
-    public final void whenDeviceMuted() {
-        try {
-            status = rt().controller().muteDevice();
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        When("the device is requested to be muted", () -> status = exs.call(() -> rt().controller().muteDevice()));
 
-    @When("^the device status is requested$")
-    public final void whenDeviceStatusRequested() {
-        try {
-            status = rt().controller().deviceStatus();
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        When("the device is requested to be unmuted",
+                () -> status = exs.call(() -> rt().controller().unmuteDevice()));
 
-    @When("^the device is requested to be unmuted$")
-    public final void whenDeviceUnmuted() {
-        try {
-            status = rt().controller().unmuteDevice();
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
-    }
+        When("the device status is requested", () -> status = exs.call(() -> rt().controller().deviceStatus()));
 
-    @When("^the device volume is requested to be set to (\\d+.\\d+)$")
-    public final void whenDeviceVolumeSet(final double level) {
-        try {
-            status = rt().controller().setDeviceVolume(level);
-        } catch (final IOException | TimeoutException e) {
-            exs.thrown(e);
-        }
+        When("the device volume is requested to be set to {float}",
+                (final Float level) -> status = exs.call(() -> rt().controller().setDeviceVolume(level)));
+
     }
 
 }

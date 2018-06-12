@@ -12,7 +12,7 @@ Feature: Interfacing with the receiver to handle connection
   @EmulatedDevice
   Scenario: Open Connection
     When the connection with the device is opened
-    Then the following messages shall be received by the device:
+    Then the device shall receive the following messages:
       | namespace                                | type    |
       | urn:x-cast:com.google.cast.tp.deviceauth | AUTH    |
       | urn:x-cast:com.google.cast.tp.heartbeat  | PING    |
@@ -28,14 +28,14 @@ Feature: Interfacing with the receiver to handle connection
   @EmulatedDevice
   Scenario: Connection timeout
     Given the device has become unresponsive
-    When the connection with the device is opened with a timeout of "PT1S"
+    When the connection with the device is opened with a timeout of PT1S
     Then a "java.util.concurrent.TimeoutException" shall be thrown with message containing "No response received within"
 
   @EmulatedDevice
   Scenario: Disconnection
     Given the connection with the device has been opened
-    When the connection is closed
-    Then the following messages shall be received by the device:
+    When the connection with the device is closed
+    Then the device shall receive the following messages:
       | namespace                                | type    |
       | urn:x-cast:com.google.cast.tp.deviceauth | AUTH    |
       | urn:x-cast:com.google.cast.tp.heartbeat  | PING    |
@@ -46,6 +46,5 @@ Feature: Interfacing with the receiver to handle connection
   Scenario: Disconnection after heartbeat timeout
     Given the connection with the device has been opened
     When the device becomes unresponsive
-    Then the connection shall be closed after "PT4S"
-    And the device controller listener shall be notified of the following events:
-      | CONNECTION_DEAD |
+    Then the connection shall be closed after PT4S
+    And the device controller listener shall be notified of a CONNECTION_DEAD event

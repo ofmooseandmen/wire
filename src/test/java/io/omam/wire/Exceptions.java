@@ -36,15 +36,29 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 
-import cucumber.api.java.After;
-import cucumber.api.java.en.Then;
+import cucumber.api.java8.En;
 
 /**
  * Steps pertaining to testing whether expected {@link Exception} have been thrown.
  */
 @SuppressWarnings("javadoc")
-public final class Exceptions {
+public final class Exceptions implements En {
+
+    /**
+     * A {@link Runnable} that throws {@link Exception}.
+     */
+    @FunctionalInterface
+    static interface ThrowingRunnable {
+
+        /**
+         * Runs an action by side-effect, possibly throwing an {@link Exception}.
+         *
+         * @throws Exception in case of failure
+         */
+        void run() throws Exception;
+    }
 
     private final Queue<Exception> exs;
 
@@ -53,28 +67,38 @@ public final class Exceptions {
      */
     public Exceptions() {
         exs = new ArrayDeque<>();
+
+        After(() -> assertTrue("Unasserted exceptions: " + exs, exs.isEmpty()));
+
+        Then("a {string} shall be thrown with message containing {string}",
+                (final String clazz, final String msg) -> {
+                    final Exception ex = exs.poll();
+                    assertNotNull(ex);
+                    assertEquals(clazz, ex.getClass().getName());
+                    final String[] sequences = msg.split("\\(\\.\\.\\.\\)");
+                    for (final String sequence : sequences) {
+                        final String s = sequence.trim();
+                        assertTrue("Expected message to contain [" + s + "] but was [" + ex.getMessage() + "]",
+                                ex.getMessage().contains(s));
+                    }
+                });
     }
 
-    @After
-    public final void after() {
-        assertTrue("Unasserted exceptions: " + exs, exs.isEmpty());
-    }
-
-    @Then("^a \"([^\\\"]*)\" shall be thrown with message containing \"([^\"]*)\"$")
-    public final void thenExceptionThrow(final String exceptionClass, final String exceptionMessage) {
-        final Exception ex = exs.poll();
-        assertNotNull(ex);
-        assertEquals(exceptionClass, ex.getClass().getName());
-        final String[] sequences = exceptionMessage.split("\\(\\.\\.\\.\\)");
-        for (final String sequence : sequences) {
-            final String s = sequence.trim();
-            assertTrue("Expected message to contain [" + s + "] but was [" + ex.getMessage() + "]",
-                    ex.getMessage().contains(s));
+    final <T> T call(final Callable<T> c) {
+        try {
+            return c.call();
+        } catch (final Exception e) {
+            exs.add(e);
+            return null;
         }
     }
 
-    final void thrown(final Exception exception) {
-        exs.add(exception);
+    final void run(final ThrowingRunnable r) {
+        try {
+            r.run();
+        } catch (final Exception e) {
+            exs.add(e);
+        }
     }
 
 }
