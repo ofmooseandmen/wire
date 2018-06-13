@@ -1,36 +1,28 @@
 # this file is greatly inspired by https://github.com/junit-team/junit5/blob/master/.travis.yml
 language: java
 
-# Get latest install-jdk.sh script
-before_install:
-  - wget https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
+sudo: false
+dist: trusty
 
 matrix:
     include:
         - os: linux
           jdk: openjdk8
-          env: JDK='Open JDK 8'
         - os: linux
-          jdk: oraclejdk8
-          env: JDK='Oracle JDK 8'
+          jdk: openjdk9
         - os: linux
-          install: . ./install-jdk.sh -F 9
-          env: JDK='Open JDK 9' EXTRA_GRADLE_ARGS='-PenableJaCoCo'
+          jdk: openjdk10
+          env: JACOCO='-PenableJaCoCo' 
         - os: linux
-          jdk: oraclejdk9
-          env: JDK='Oracle JDK 9'
-        - os: linux
-          install: . ./install-jdk.sh -F 10
-          env: JDK='Open JDK 10'
-        - os: linux
-          install: . ./install-jdk.sh -F 10 -L BCL
-          env: JDK='Oracle JDK 10'
+          jdk: openjdk-ea
         - os: osx
-          env: JDK='Unknown JDK (8+)'
+          jdk: openjdk10
+    allow_failures:
+        - jdk: openjdk-ea  
 
 script:
   - ./gradlew -version
-  - ./gradlew --stacktrace --warning-mode=all ${EXTRA_GRADLE_ARGS} assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite
+  - ./gradlew --stacktrace --warning-mode=all ${JACOCO} assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite
 
 # Do not store unnecessary files from Gradle dependency cache
 before_cache:
@@ -43,8 +35,7 @@ cache:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
  
- # Upload JaCoCo report to codecov   
+ # If variable JACOCO is set, run JaCoCo report and send report to codecov.io after build success
 after_success:
-  - test "${JDK}" = "Open JDK 9" && ./gradlew -PenableJaCoCo jacocoTestReport || true
-  - test "${JDK}" = "Open JDK 9" && bash <(curl -s https://codecov.io/bash) || true
+  - test -v JACOCO && ./gradlew ${JACOCO} jacocoTestReport && bash <(curl -s https://codecov.io/bash) || true
 
