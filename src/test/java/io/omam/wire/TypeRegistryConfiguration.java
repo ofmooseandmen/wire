@@ -75,7 +75,7 @@ public final class TypeRegistryConfiguration implements TypeRegistryConfigurer {
     }
 
     @Override
-    public Locale locale() {
+    public final Locale locale() {
         return Locale.ENGLISH;
     }
 }
