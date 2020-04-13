@@ -289,6 +289,17 @@ final class EmulatedCastDevice implements AutoCloseable {
         }
     }
 
+    /**
+     * Returns true if the given message request the connection with this device to be closed.
+     *
+     * @param message message
+     * @return true if the given message request the connection with this device to be closed
+     */
+    private static boolean isCloseConnection(final CastMessage message) {
+        /* ignore close request for applications. */
+        return message.getDestinationId().equals(CastV2Protocol.DEFAULT_RECEIVER_ID) && is(message, "CLOSE");
+    }
+
     @Override
     public final void close() {
         if (readerThread != null) {
@@ -425,7 +436,7 @@ final class EmulatedCastDevice implements AutoCloseable {
                         .setPayloadBinary(resp)
                         .build();
                     send(msg);
-                } else if (is(message, "CLOSE")) {
+                } else if (isCloseConnection(message)) {
                     break;
                 } else {
                     final String type = parse(message, AnyPayload.class)
