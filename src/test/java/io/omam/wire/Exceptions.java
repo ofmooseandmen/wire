@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 
-import cucumber.api.java8.En;
+import io.cucumber.java8.En;
 
 /**
  * Steps pertaining to testing whether expected {@link Exception} have been thrown.

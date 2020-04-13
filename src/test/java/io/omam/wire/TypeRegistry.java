@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -30,33 +30,31 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-import io.omam.wire.CastChannel.CastMessage;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
+
+import java.time.Duration;
+
+import io.cucumber.java8.En;
+import io.omam.wire.ScenarioRuntime.EventType;
 
 /**
- * Default Media Receiver controller.
- * <p>
- * The receiving Cast device can support either video and audio streams or audio streams only. Do not load a video
- * streams if not supported.
- * <p>
- * This application is available on all devices.
+ * Register types used in step definitions.
  */
-public final class MediaController extends StandardApplicationController {
-
-    /** the ID of the default media receiver application. */
-    public static final String APP_ID = "CC1AD845";
+public final class TypeRegistry implements En {
 
     /**
      * Constructor.
      *
-     * @param someDetails application details
      */
-    public MediaController(final Application someDetails) {
-        super(someDetails);
-    }
+    public TypeRegistry() {
 
-    @Override
-    protected final void appMessageReceived(final CastMessage message) {
-        // TODO Auto-generated method stub
+        ParameterType("duration", "PT[HMS0-9].", (final String value) -> Duration.parse(value));
+
+        ParameterType("eventType", stream(EventType.values()).map(EventType::toString).collect(joining("|")),
+                (final String value) -> EventType.valueOf(value));
+
+        DataTableType(ReceivedMessage::new);
 
     }
 

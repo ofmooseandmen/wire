@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -39,10 +39,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import cucumber.api.java8.En;
 import io.cucumber.datatable.DataTable;
+import io.cucumber.java8.En;
 import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payloads.Message;
+import io.omam.wire.Payloads.AnyPayload;
 
 /**
  * Steps to control the behaviour and probe the state of the emulated Cast device.
@@ -65,11 +65,13 @@ public final class EmulatedCastDeviceSteps implements En {
         Then("the device shall receive the following message(s):", (final DataTable dt) -> {
             final List<ReceivedMessage> expecteds = dt.asList(ReceivedMessage.class);
             for (final ReceivedMessage expected : expecteds) {
-                final CastMessage msg = rt().emulatedCastDevice().takeReceivedMessage(TIMEOUT).orElseThrow(
-                        () -> new AssertionError("Message " + expected + " was not received"));
+                final CastMessage msg = rt()
+                    .emulatedCastDevice()
+                    .takeReceivedMessage(TIMEOUT)
+                    .orElseThrow(() -> new AssertionError("Message " + expected + " was not received"));
                 assertEquals(msg.getNamespace(), expected.namespace());
                 if (!expected.type().equals("AUTH")) {
-                    final Message parsed = parse(msg, Message.class).orElseThrow(UNPARSABLE);
+                    final AnyPayload parsed = parse(msg, AnyPayload.class).orElseThrow(UNPARSABLE);
                     assertEquals(parsed.type(), Optional.of(expected.type()));
                 }
             }

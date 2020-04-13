@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -39,9 +39,8 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
-import io.omam.halo.Browser;
 import io.omam.wire.AppAvailabilities.AppAvailability;
 
 /**
@@ -55,19 +54,19 @@ public interface CastDeviceController extends AutoCloseable {
      * Cast devices already notified to the listener are not {@link #close() closed}, when the browser is closed.
      *
      * @param listener the listener to be notified when a Cast device availability changes
-     * @return a {@link Browser} to terminate the browsing operation
+     * @return a {@link CastDeviceBrowser browser} to terminate the browsing operation
      * @throws IOException in case of I/O error
      */
-    static Browser browse(final CastDeviceBrowserListener listener) throws IOException {
-        return new CastDeviceBrowser(listener);
+    static CastDeviceBrowser browse(final CastDeviceBrowserListener listener) throws IOException {
+        return new CastDeviceBrowserImpl(listener);
     }
 
     /**
      * Returns a new controller implementing the CAST V2 protocol.
      *
-     * @param name Cast device name
+     * @param name    Cast device name
      * @param address Cast device IP address
-     * @param port Cast device port
+     * @param port    Cast device port
      * @return a new client implementing the CAST V2 protocol
      * @throws GeneralSecurityException in case of security error
      */
@@ -85,16 +84,13 @@ public interface CastDeviceController extends AutoCloseable {
     void addListener(final CastDeviceControllerListener listener);
 
     /**
-     * Request and returns the availability of the given applications.
-     * <p>
-     * TODO confirm: In order for an application to be detected as available it must have been launched at least
-     * once.
+     * Requests and returns the availability of the given applications.
      *
      * @param appIds ID of each application
      * @return the availability of the given applications, never null
-     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws IOException      in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the default timeout has elapsed before the availability of the given
-     *             applications was received
+     *                          applications was received
      */
     default AppAvailabilities appsAvailability(final Collection<String> appIds)
             throws IOException, TimeoutException {
@@ -102,17 +98,14 @@ public interface CastDeviceController extends AutoCloseable {
     }
 
     /**
-     * Request and returns the availability of the given applications.
-     * <p>
-     * TODO confirm: In order for an application to be detected as available it must have been launched at least
-     * once.
+     * Requests and returns the availability of the given applications.
      *
-     * @param appIds ID of each application
+     * @param appIds  ID of each application
      * @param timeout response timeout
      * @return the availability of the given applications, never null
-     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws IOException      in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
-     *             received
+     *                          received
      */
     AppAvailabilities appsAvailability(final Collection<String> appIds, final Duration timeout)
             throws IOException, TimeoutException;
@@ -129,7 +122,7 @@ public interface CastDeviceController extends AutoCloseable {
      * Connects to the Cast device. This method blocks until the connection has been established or the default
      * connection timeout has elapsed.
      *
-     * @throws IOException in case of I/O error (including authentication error)
+     * @throws IOException      in case of I/O error (including authentication error)
      * @throws TimeoutException if the timeout has elapsed before the connection could be opened
      */
     default void connect() throws IOException, TimeoutException {
@@ -141,7 +134,7 @@ public interface CastDeviceController extends AutoCloseable {
      * connection timeout has elapsed.
      *
      * @param timeout connection timeout
-     * @throws IOException in case of I/O error (including authentication error)
+     * @throws IOException      in case of I/O error (including authentication error)
      * @throws TimeoutException if the timeout has elapsed before the connection could be opened
      */
     void connect(final Duration timeout) throws IOException, TimeoutException;
@@ -156,10 +149,10 @@ public interface CastDeviceController extends AutoCloseable {
     String deviceName();
 
     /**
-     * Request and returns the status of the Cast device.
+     * Requests and returns the status of the Cast device.
      *
      * @return the status of the Cast device, never null
-     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws IOException      in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the default timeout has elapsed before the status was received
      */
     default CastDeviceStatus deviceStatus() throws IOException, TimeoutException {
@@ -171,22 +164,19 @@ public interface CastDeviceController extends AutoCloseable {
      *
      * @param timeout response timeout
      * @return the status of the Cast device, never null
-     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws IOException      in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
     CastDeviceStatus deviceStatus(final Duration timeout) throws IOException, TimeoutException;
 
     /**
      * Determines whether the given application is available on the device.
-     * <p>
-     * TODO confirm: In order for an application to be detected as available it must have been launched at least
-     * once.
      *
      * @param appId application id
      * @return {@code true} if the given application is available on the device
-     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws IOException      in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the default timeout has elapsed before the availability of the given
-     *             applications was received
+     *                          applications was received
      */
     default boolean isAppAvailable(final String appId) throws IOException, TimeoutException {
         return isAppAvailable(appId, REQUEST_TIMEOUT);
@@ -194,21 +184,19 @@ public interface CastDeviceController extends AutoCloseable {
 
     /**
      * Determines whether the given application is available on the device.
-     * <p>
-     * TODO confirm: In order for an application to be detected as available it must have been launched at least
-     * once.
      *
-     * @param appId application id
+     * @param appId   application id
      * @param timeout response timeout
      * @return {@code true} if the given application is available on the device
-     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws IOException      in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
-     *             received
+     *                          received
      */
     default boolean isAppAvailable(final String appId, final Duration timeout)
             throws IOException, TimeoutException {
-        return appsAvailability(Arrays.asList(appId), timeout).availabilities().getOrDefault(appId,
-                AppAvailability.APP_NOT_AVAILABLE) == AppAvailability.APP_AVAILABLE;
+        return appsAvailability(Arrays.asList(appId), timeout)
+            .availabilities()
+            .getOrDefault(appId, AppAvailability.APP_NOT_AVAILABLE) == AppAvailability.APP_AVAILABLE;
     }
 
     /**
@@ -219,39 +207,75 @@ public interface CastDeviceController extends AutoCloseable {
     boolean isConnected();
 
     /**
-     * Request the launch of the given application and returns the received status of the Cast device.
+     * Joins the session of given application which is launched on the device.
+     * <p>
+     * Requests/messages can be sent to the device from the given controller from this point onwards.
      *
-     * @param <T> {@link ApplicationController} type
-     * @param appId application ID
+     * @param app application controller
+     */
+    void joinAppSession(final ApplicationController app);
+
+    /**
+     * Requests the launch of the given application, join the application session, and returns the received status
+     * of the Cast device.
+     *
+     * @param <T>                {@link ApplicationController} type
+     * @param appId              application ID
      * @param controllerSupplier application controller supplier
      * @return the status of the Cast device, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the status was received
      */
     default <T extends ApplicationController> T launchApp(final String appId,
-            final Function<Application, T> controllerSupplier) throws IOException, TimeoutException {
+            final BiFunction<Application, ApplicationWire, T> controllerSupplier)
+            throws IOException, TimeoutException {
         return launchApp(appId, controllerSupplier, REQUEST_TIMEOUT);
     }
 
     /**
-     * Request the launch of the given application and returns the received status of the Cast device.
+     * Requests the launch of the given application, join the application session, and returns the received status
+     * of the Cast device.
+     * <p>
+     * If {@code joinAppSession} if false, {@link #joinAppSession(ApplicationController)} must be called before any
+     * message is to be sent to the application running on the device.
      *
-     * @param <T> {@link ApplicationController} type
-     * @param appId application ID
+     * @param <T>                {@link ApplicationController} type
+     * @param appId              application ID
      * @param controllerSupplier application controller supplier
-     * @param timeout response timeout
+     * @param joinAppSession     {@code true} if a connect message is to be sent to the application to join the
+     *                           running session
+     * @param timeout            response timeout
      * @return the status of the Cast device, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
-    <T extends ApplicationController> T launchApp(final String appId, Function<Application, T> controllerSupplier,
+    <T extends ApplicationController> T launchApp(final String appId,
+            BiFunction<Application, ApplicationWire, T> controllerSupplier, final boolean joinAppSession,
             final Duration timeout) throws IOException, TimeoutException;
+
+    /**
+     * Requests the launch of the given application, join the application session, and returns the received status
+     * of the Cast device.
+     *
+     * @param <T>                {@link ApplicationController} type
+     * @param appId              application ID
+     * @param controllerSupplier application controller supplier
+     * @param timeout            response timeout
+     * @return the status of the Cast device, never null
+     * @throws IOException      if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the status was received
+     */
+    default <T extends ApplicationController> T launchApp(final String appId,
+            final BiFunction<Application, ApplicationWire, T> controllerSupplier, final Duration timeout)
+            throws IOException, TimeoutException {
+        return launchApp(appId, controllerSupplier, true, timeout);
+    }
 
     /**
      * Mutes the device.
      *
      * @return the received response, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
     default CastDeviceStatus muteDevice() throws IOException, TimeoutException {
@@ -263,7 +287,7 @@ public interface CastDeviceController extends AutoCloseable {
      *
      * @param timeout response timeout
      * @return the received response, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
     CastDeviceStatus muteDevice(final Duration timeout) throws IOException, TimeoutException;
@@ -280,7 +304,7 @@ public interface CastDeviceController extends AutoCloseable {
      *
      * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
      * @return the received response, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
     default CastDeviceStatus setDeviceVolume(final double level) throws IOException, TimeoutException {
@@ -290,22 +314,22 @@ public interface CastDeviceController extends AutoCloseable {
     /**
      * Sets the volume level of the device.
      *
-     * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
+     * @param level   the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
      * @param timeout response timeout
      * @return the received response, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
     CastDeviceStatus setDeviceVolume(final double level, final Duration timeout)
             throws IOException, TimeoutException;
 
     /**
-     * Request the running instance of the given application to be stopped and returns the received status of the
+     * Requests the running instance of the given application to be stopped and returns the received status of the
      * Cast device.
      *
      * @param app application controller
      * @return the status of the Cast device, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the status was received
      */
     default CastDeviceStatus stopApp(final ApplicationController app) throws IOException, TimeoutException {
@@ -313,13 +337,13 @@ public interface CastDeviceController extends AutoCloseable {
     }
 
     /**
-     * Request the running instance of the given application to be stopped and returns the received status of the
+     * Requests the running instance of the given application to be stopped and returns the received status of the
      * Cast device.
      *
-     * @param app application controller
+     * @param app     application controller
      * @param timeout response timeout
      * @return the status of the Cast device, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
     CastDeviceStatus stopApp(final ApplicationController app, final Duration timeout)
@@ -329,7 +353,7 @@ public interface CastDeviceController extends AutoCloseable {
      * Un-mutes the device.
      *
      * @return the received response, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
     default CastDeviceStatus unmuteDevice() throws IOException, TimeoutException {
@@ -341,7 +365,7 @@ public interface CastDeviceController extends AutoCloseable {
      *
      * @param timeout response timeout
      * @return the received response, never null
-     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws IOException      if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
     CastDeviceStatus unmuteDevice(final Duration timeout) throws IOException, TimeoutException;

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -32,38 +32,66 @@ package io.omam.wire;
 
 import static io.omam.wire.Payloads.parse;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Predicate;
 
 import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payloads.Message;
+import io.omam.wire.Payloads.AnyPayload;
 
 /**
- * Base application controller that correlates responses with requests using the JSON {@code requestId}.
+ * Standard application controller, TODO
  * <p>
  * This class is intended to be extended to implement the application protocol.
  *
- * @see CastDeviceController#launchApp(String, java.util.function.Function, java.time.Duration)
- * @see CastDeviceController#stopApp(ApplicationController, Duration)
+ * @see CastDeviceController#launchApp(String, java.util.function.BiFunction, java.time.Duration)
+ * @see CastDeviceController#stopApp(ApplicationController, java.time.Duration)
  */
-public abstract class StandardApplicationController extends ApplicationController {
+public abstract class StandardApplicationController implements ApplicationController {
 
     /** standard response predicate. */
     private static final Predicate<CastMessage> STD_RESP_PREDICATE = m -> {
-        final Optional<Message> rs = parse(m, Message.class);
+        final Optional<AnyPayload> rs = parse(m, AnyPayload.class);
         return rs.isPresent() && !rs.get().requestId().isPresent();
     };
 
+    /** the details of this application. */
+    private final Application details;
+
     /**
      * Constructor.
-     * <p>
-     * Any message containing a requestId property are assumed to be a response to a request.
      *
      * @param someDetails the details of this application
      */
     protected StandardApplicationController(final Application someDetails) {
-        super(someDetails, STD_RESP_PREDICATE);
+        details = someDetails;
     }
+
+    @Override
+    public final Application details() {
+        return details;
+    }
+
+    @Override
+    public final void messageReceived(final CastMessage message) {
+        if (!STD_RESP_PREDICATE.test(message)
+            && details.namespaces().stream().anyMatch(n -> n.name().equals(message.getNamespace()))) {
+            appMessageReceived(message);
+        }
+    }
+
+    @Override
+    public final void socketError() {
+        // ignore, handled by connection.
+    }
+
+    /**
+     * Invoked when a message from the application has been received.
+     * <p>
+     * This method is invoked only with messages of the {@link Application#namespaces() application namespaces}
+     * which are not responses to requests.
+     *
+     * @param message application message
+     */
+    protected abstract void appMessageReceived(final CastMessage message);
 
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2018-2020 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -28,38 +28,28 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package io.omam.wire;
+package io.omam.wire.media;
 
 /**
- * Static methods to convert integer to/from Big Endian (network) bytes.
+ * Behavior of the queue when all items have been played.
+ *
+ * @see <a href=
+ *      "https://developers.google.com/cast/docs/reference/receiver/cast.receiver.media#.RepeatMode">Google Cast
+ *      Reference: RepeatMode</a>
  */
-final class Bytes {
-
+public enum RepeatMode {
+    /** When the queue is completed the media session is terminated. */
+    REPEAT_OFF,
     /**
-     * Constructor.
+     * All the items in the queue will be played indefinitely, when the last item is played it will play the first
+     * item again.
      */
-    private Bytes() {
-        // empty.
-    }
-
+    REPEAT_ALL,
+    /** The current item will be played repeatedly. */
+    REPEAT_SINGLE,
     /**
-     * Converts the given integer into its Big Endian binary representation.
-     *
-     * @param i integer
-     * @return bytes
+     * All the items in the queue will be played indefinitely, when the last item is played it will play the first
+     * item again (the list will be shuffled by the receiver first).
      */
-    static byte[] toBytes(final int i) {
-        return new byte[] { (byte) (i >> 24), (byte) (i >> 16), (byte) (i >> 8), (byte) i };
-    }
-
-    /**
-     * Converts the bytes (Big Endian) into an integer.
-     *
-     * @param bytes bytes
-     * @return integer
-     */
-    static int toInt(final byte[] bytes) {
-        return bytes[0] << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | bytes[3] & 0xFF;
-    }
-
+    REPEAT_ALL_AND_SHUFFLE;
 }

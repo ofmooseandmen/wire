@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -42,16 +42,16 @@ package io.omam.wire;
 public interface Volume {
 
     /**
+     * @return whether the receiver or stream is muted, independent of the volume level.
+     */
+    boolean isMuted();
+
+    /**
      * Returns the current volume level as a value between {@code 0.0} and {@code 1.0}. {@code 1.0} is the maximum
      * volume possible on the receiver or stream.
      *
      * @return the current volume level
      */
     double level();
-
-    /**
-     * @return whether the receiver or stream is muted, independent of the volume level.
-     */
-    boolean isMuted();
 
 }

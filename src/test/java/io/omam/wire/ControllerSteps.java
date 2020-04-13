@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -40,7 +40,7 @@ import static org.junit.Assert.assertTrue;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import cucumber.api.java8.En;
+import io.cucumber.java8.En;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.ScenarioRuntime.Event;
 import io.omam.wire.ScenarioRuntime.EventType;
@@ -53,13 +53,14 @@ public final class ControllerSteps implements En {
 
     private static final class FakeAppController extends StandardApplicationController {
 
-        FakeAppController(final Application someDetails) {
+        @SuppressWarnings("unused")
+        FakeAppController(final Application someDetails, final ApplicationWire aWire) {
             super(someDetails);
         }
 
         @Override
         protected final void appMessageReceived(final CastMessage message) {
-            // ignore.
+            // empty.
         }
 
     }

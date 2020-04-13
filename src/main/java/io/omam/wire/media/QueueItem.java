@@ -1,5 +1,5 @@
 /*
-Copyright 2018-2020 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -28,38 +28,46 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package io.omam.wire;
+package io.omam.wire.media;
+
+import java.time.Duration;
 
 /**
- * Static methods to convert integer to/from Big Endian (network) bytes.
+ * Queue item information.
+ *
+ * @see <a href= "https://developers.google.com/cast/docs/reference/receiver/cast.receiver.media.QueueItem">Google
+ *      Cast Reference: QueueItem</a>
  */
-final class Bytes {
+public interface QueueItem {
 
     /**
-     * Constructor.
-     */
-    private Bytes() {
-        // empty.
-    }
-
-    /**
-     * Converts the given integer into its Big Endian binary representation.
+     * Whether the media player will begin playing the element in the queue when the item becomes current.
      *
-     * @param i integer
-     * @return bytes
+     * @return {@code true} if the media player will begin playing the element in the queue when the item becomes
+     *         current
      */
-    static byte[] toBytes(final int i) {
-        return new byte[] { (byte) (i >> 24), (byte) (i >> 16), (byte) (i >> 8), (byte) i };
-    }
+    boolean autoplay();
 
     /**
-     * Converts the bytes (Big Endian) into an integer.
+     * Returns the media data of the playlist element.
      *
-     * @param bytes bytes
-     * @return integer
+     * @return the media data of the playlist element
      */
-    static int toInt(final byte[] bytes) {
-        return bytes[0] << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | bytes[3] & 0xFF;
-    }
+    Media media();
+
+    /**
+     * Returns the time relative to the beginning of this item playback at which the item shall be preloaded to
+     * allow for smooth transition between items.
+     *
+     * @return preload time relative to the beginning of this item playback
+     */
+    Duration preloadTime();
+
+    /**
+     * Returns the duration since the beginning of content.
+     *
+     * @return the duration since the beginning of content
+     */
+    Duration startTime();
 
 }

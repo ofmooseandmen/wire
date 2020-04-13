@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -39,14 +39,14 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
-import cucumber.api.CucumberOptions;
-import cucumber.api.junit.Cucumber;
+import io.cucumber.junit.Cucumber;
+import io.cucumber.junit.CucumberOptions;
 
 /**
  * Associates Cucumber JVM with the Junit runner to run all Wire features targeting an real Cast device.
  * <p>
- * This test suite is intended to be run on the CI where obviously no real Cast device is available: an idle Cast
- * device with must be reachable on the local network in order for the tests of this suite to pass.
+ * This test suite is NOT intended to be run on the CI where obviously no real Cast device is available: an idle
+ * Cast device with must be reachable on the local network in order for the tests of this suite to pass.
  */
 @RunWith(Cucumber.class)
 @CucumberOptions(monochrome = true, dryRun = false, strict = true, tags = { "@RealDevice" }, plugin = {}, features = {})
@@ -64,8 +64,8 @@ public final class WireRealDeviceTestSuite {
      * Reads 'logging.properties', configures all Loggers and browses the local network for a real Cast device.
      *
      * @throws SecurityException if a security manager exists and if the caller does not have
-     *             LoggingPermission("control")
-     * @throws Exception if test environment setup fails
+     *                           LoggingPermission("control")
+     * @throws Exception         if test environment setup fails
      */
     @BeforeClass
     public static void before() throws Exception {

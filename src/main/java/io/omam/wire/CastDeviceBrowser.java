@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -30,106 +30,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-import static io.omam.wire.CastV2Protocol.FRIENDLY_NAME;
-import static io.omam.wire.CastV2Protocol.REGISTRATION_TYPE;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.time.Clock;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import io.omam.halo.Browser;
-import io.omam.halo.Halo;
-import io.omam.halo.Service;
-import io.omam.halo.ServiceBrowserListener;
-
 /**
- * Browser to discover Cast devices on the local domain of the network.
+ * A browser represents an active browsing operation for CAST devices.
  */
-final class CastDeviceBrowser implements Browser {
+public interface CastDeviceBrowser extends AutoCloseable {
 
     /**
-     * {@link ServiceBrowserListener} that notifies a browser.
-     */
-    private static final class Listener implements ServiceBrowserListener {
-
-        /** logger. */
-        private static final Logger LOGGER = Logger.getLogger(Listener.class.getName());
-
-        /** all discovered clients indexed by service name. */
-        private final Map<String, CastDeviceController> clients;
-
-        /** listener to notify. */
-        private final CastDeviceBrowserListener l;
-
-        /**
-         * Constructor.
-         *
-         * @param listener browser to notify
-         */
-        Listener(final CastDeviceBrowserListener listener) {
-            clients = new ConcurrentHashMap<>();
-            l = listener;
-        }
-
-        @Override
-        public final void down(final Service service) {
-            final CastDeviceController client = clients.remove(service.name().toLowerCase());
-            if (client != null) {
-                l.down(client);
-            }
-        }
-
-        @Override
-        public final void up(final Service service) {
-            final InetAddress address = service.ipv4Address().orElseGet(() -> service.ipv6Address().orElse(null));
-            final String name = service.attributes().value(FRIENDLY_NAME, StandardCharsets.UTF_8).orElseGet(
-                    service::instanceName);
-            if (address == null) {
-                LOGGER.warning(() -> "Ignored Cast Device ["
-                    + service.instanceName()
-                    + "] as it does not report its IP address");
-            } else {
-                final int port = service.port();
-                try {
-                    final CastDeviceController client = CastDeviceController.v2(name, address, port);
-                    clients.put(service.name().toLowerCase(), client);
-                    l.up(client);
-                } catch (final GeneralSecurityException e) {
-                    LOGGER.log(Level.WARNING, e, () -> "Ignored Cast Device [" + service.instanceName() + "]");
-                }
-            }
-        }
-
-    }
-
-    /** halo. */
-    private final Halo halo;
-
-    /** cast browser. */
-    private final Browser browser;
-
-    /**
-     * Constructor.
+     * Closes this browser. The browsing operation will be terminated and the associated listener will no longer
+     * receive events.
      *
-     * @param listener listener
-     * @throws IOException in case of I/O error
+     * @see CastDeviceController#browse(CastDeviceBrowserListener)
      */
-    CastDeviceBrowser(final CastDeviceBrowserListener listener) throws IOException {
-        halo = Halo.allNetworkInterfaces(Clock.systemDefaultZone());
-        final ServiceBrowserListener l = new Listener(listener);
-        browser = halo.browse(REGISTRATION_TYPE, l);
-    }
-
     @Override
-    public final void close() {
-        browser.close();
-        halo.close();
-    }
+    void close();
 
 }

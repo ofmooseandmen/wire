@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -30,18 +30,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-import static io.omam.wire.CastV2Protocol.DEFAULT_RECEIVER_ID;
 import static io.omam.wire.CastV2Protocol.PING_INTERVAL;
 import static io.omam.wire.CastV2Protocol.PONG_TIMEOUT;
-import static io.omam.wire.CastV2Protocol.SENDER_ID;
 import static io.omam.wire.Payloads.build;
 import static io.omam.wire.Payloads.is;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -53,11 +53,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.MessageLite;
 
 import io.omam.wire.CastChannel.AuthChallenge;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.CastChannel.DeviceAuthMessage;
-import io.omam.wire.Payloads.Message;
 
 /**
  * {@code ConnectionController} implements the {@code urn:x-cast:com.google.cast.tp.deviceauth},
@@ -72,9 +72,29 @@ import io.omam.wire.Payloads.Message;
 final class ConnectionController implements ChannelListener, AutoCloseable {
 
     /**
+     * Close message.
+     */
+    private static final class Close extends Connection {
+
+        /** unique instance. */
+        static final Close INSTANCE = new Close();
+
+        /**
+         * Constructor.
+         */
+        private Close() {
+            super("CLOSE");
+        }
+
+    }
+
+    /**
      * Connect message.
      */
     private static final class Connect extends Connection {
+
+        /** unique instance. */
+        static final Connect INSTANCE = new Connect();
 
         /** user agent. */
         @SuppressWarnings("unused")
@@ -83,7 +103,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         /**
          * Constructor.
          */
-        Connect() {
+        private Connect() {
             super("CONNECT");
             userAgent = "wire";
         }
@@ -91,9 +111,9 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     }
 
     /**
-     * Connection message.
+     * Connection request payload.
      */
-    private static class Connection extends Message {
+    private static abstract class Connection extends Payload {
 
         /** origin. */
         @SuppressWarnings("unused")
@@ -112,6 +132,38 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     }
 
     /**
+     * Ping message payload.
+     */
+    private static final class Ping extends Payload {
+
+        /** unique instance. */
+        static final Ping INSTANCE = new Ping();
+
+        /**
+         * Constructor.
+         */
+        private Ping() {
+            super("PING", null);
+        }
+    }
+
+    /**
+     * Pong message payload.
+     */
+    private static final class Pong extends Payload {
+
+        /** unique instance. */
+        static final Pong INSTANCE = new Pong();
+
+        /**
+         * Constructor.
+         */
+        private Pong() {
+            super("PONG", null);
+        }
+    }
+
+    /**
      * Connection state.
      */
     private enum State {
@@ -123,26 +175,17 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         OPENED;
     }
 
-    /** PING message type. */
-    private static final String PING = "PING";
-
-    /** PONG message type. */
-    private static final String PONG = "PONG";
-
-    /** close message type. */
-    private static final String CLOSE = "CLOSE";
+    /** connection namespace. */
+    private static final String CONNECTION_NS = "urn:x-cast:com.google.cast.tp.connection";
 
     /** authentication namespace */
     private static final String AUTH_NS = "urn:x-cast:com.google.cast.tp.deviceauth";
-
-    /** connection namespace. */
-    private static final String CONNECTION_NS = "urn:x-cast:com.google.cast.tp.connection";
 
     /** heartbeat namepspace. */
     private static final String HEARTBEAT_NS = "urn:x-cast:com.google.cast.tp.heartbeat";
 
     /** the authentication message. */
-    private static final CastMessage AUTHENTICATION;
+    private static final DeviceAuthMessage AUTHENTICATION;
 
     /** heartbeat PING message. */
     private static final CastMessage PING_MSG;
@@ -154,21 +197,10 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     private static final CastMessage CLOSE_MSG;
 
     static {
-        final DeviceAuthMessage authMessage =
-                DeviceAuthMessage.newBuilder().setChallenge(AuthChallenge.newBuilder().build()).build();
-        AUTHENTICATION = CastMessage
-            .newBuilder()
-            .setProtocolVersion(CastMessage.ProtocolVersion.CASTV2_1_0)
-            .setSourceId(SENDER_ID)
-            .setDestinationId(DEFAULT_RECEIVER_ID)
-            .setNamespace(AUTH_NS)
-            .setPayloadType(CastMessage.PayloadType.BINARY)
-            .setPayloadBinary(authMessage.toByteString())
-            .build();
-
-        PING_MSG = build(HEARTBEAT_NS, new Message(PING, null));
-        CONNECT_MSG = build(CONNECTION_NS, new Connect());
-        CLOSE_MSG = build(CONNECTION_NS, new Connection(CLOSE));
+        AUTHENTICATION = DeviceAuthMessage.newBuilder().setChallenge(AuthChallenge.newBuilder().build()).build();
+        PING_MSG = build(HEARTBEAT_NS, Ping.INSTANCE);
+        CONNECT_MSG = build(CONNECTION_NS, Connect.INSTANCE);
+        CLOSE_MSG = build(CONNECTION_NS, Close.INSTANCE);
     }
 
     /** logger. */
@@ -195,6 +227,9 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     /** listeners. */
     private final List<ConnectionListener> listeners;
 
+    @SuppressWarnings("javadoc")
+    private final Set<String> sessions;
+
     /**
      * Constructor.
      *
@@ -211,6 +246,8 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         monitor = new Monitor(() -> state == State.OPENED);
 
         listeners = new CopyOnWriteArrayList<>();
+
+        sessions = new HashSet<>();
     }
 
     /**
@@ -220,7 +257,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
      * @return a new message representing a heartbeat {@code PONG}
      */
     private static CastMessage pong(final String destination) {
-        return build(HEARTBEAT_NS, destination, new Message(PONG, null));
+        return build(HEARTBEAT_NS, destination, Pong.INSTANCE);
     }
 
     /**
@@ -237,7 +274,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     public final void messageReceived(final CastMessage message) {
         monitor.lock();
         try {
-            if (is(message, PONG)) {
+            if (is(message, "PONG")) {
                 if (fTimeout != null) {
                     fTimeout.cancel(true);
                     fTimeout = null;
@@ -247,7 +284,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
                 if (connecting) {
                     monitor.signalAll();
                 }
-            } else if (is(message, PING)) {
+            } else if (is(message, "PING")) {
                 channel.send(pong(message.getSourceId()));
             }
         } finally {
@@ -275,7 +312,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
      * connection timeout has elapsed.
      *
      * @param timeout connection timeout
-     * @throws IOException in case of I/O error (including authentication error)
+     * @throws IOException      in case of I/O error (including authentication error)
      * @throws TimeoutException if the timeout has elapsed before the connection could be opened
      */
     final void connect(final Duration timeout) throws IOException, TimeoutException {
@@ -283,9 +320,9 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
             state = State.CONNECTING;
             channel.connect();
             /* authenticate. */
-            final Requestor auth = new Requestor(channel, (req, resp) -> true);
+            final Requestor<MessageLite> auth = Requestor.binaryPayload(channel);
             final long start = System.nanoTime();
-            final CastMessage authResp = auth.request(AUTHENTICATION, timeout);
+            final CastMessage authResp = auth.request(AUTH_NS, AUTHENTICATION, timeout);
             try {
                 if (DeviceAuthMessage.parseFrom(authResp.getPayloadBinary()).hasError()) {
                     LOGGER.warning("Failed to authenticate with Cast device");
@@ -309,8 +346,9 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
                 channel.send(CONNECT_MSG);
 
                 /* start heartbeat. */
-                fPing = ses.scheduleAtFixedRate(this::sendPing, PING_INTERVAL.toMillis(), PING_INTERVAL.toMillis(),
-                        TimeUnit.MILLISECONDS);
+                fPing = ses
+                    .scheduleAtFixedRate(this::sendPing, PING_INTERVAL.toMillis(), PING_INTERVAL.toMillis(),
+                            TimeUnit.MILLISECONDS);
                 final Duration connectionTimeout = timeout.minus(System.nanoTime() - start, ChronoUnit.NANOS);
                 monitor.await(connectionTimeout);
             } finally {
@@ -342,10 +380,28 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         listeners.remove(listener);
     }
 
+    @SuppressWarnings("javadoc")
+    final void joinAppSession(final String transpordId) {
+        synchronized (sessions) {
+            if (!sessions.contains(transpordId)) {
+                channel.send(Payloads.build(CONNECTION_NS, transpordId, Connect.INSTANCE));
+                sessions.add(transpordId);
+            }
+        }
+    }
+
+    @SuppressWarnings("javadoc")
+    final void leaveAppSession(final String transpordId) {
+        synchronized (sessions) {
+            channel.send(Payloads.build(CONNECTION_NS, transpordId, Close.INSTANCE));
+            sessions.remove(transpordId);
+        }
+    }
+
     /**
      * Closes the connection with the Cast device.
      *
-     * @param closer method to close the channel
+     * @param closer   method to close the channel
      * @param notifier method to notify the listener
      */
     private final void close(final Consumer<CastV2Channel> closer, final Consumer<ConnectionListener> notifier) {

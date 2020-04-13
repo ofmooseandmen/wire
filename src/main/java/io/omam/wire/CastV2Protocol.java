@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -39,7 +39,10 @@ import java.util.UUID;
 /**
  * CASTV2 protocol constants.
  */
-final class CastV2Protocol {
+public final class CastV2Protocol {
+
+    /** default timeout when connecting or sending requests to the device. */
+    public static final Duration REQUEST_TIMEOUT;
 
     /** Google Cast registration type. */
     static final String REGISTRATION_TYPE;
@@ -55,9 +58,6 @@ final class CastV2Protocol {
 
     /** default receiver id. */
     static final String DEFAULT_RECEIVER_ID;
-
-    /** default timeout when connecting or sending requests to the device. */
-    static final Duration REQUEST_TIMEOUT;
 
     /** PING message interval. */
     static final Duration PING_INTERVAL;
@@ -92,7 +92,7 @@ final class CastV2Protocol {
     /**
      * Returns the {@code Duration} corresponding to the given key.
      *
-     * @param key property key
+     * @param key   property key
      * @param props properties default values
      * @return value
      */
@@ -103,7 +103,7 @@ final class CastV2Protocol {
     /**
      * Returns the {@code int} corresponding to the given key.
      *
-     * @param key property key
+     * @param key   property key
      * @param props properties default values
      * @return value
      */
@@ -114,7 +114,7 @@ final class CastV2Protocol {
     /**
      * Returns the {@code String} corresponding to the given key.
      *
-     * @param key property key
+     * @param key   property key
      * @param props properties default values
      * @return value
      */

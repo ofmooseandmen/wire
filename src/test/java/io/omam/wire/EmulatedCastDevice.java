@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -75,7 +75,7 @@ import io.omam.wire.CastChannel.AuthError.ErrorType;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.CastChannel.DeviceAuthMessage;
 import io.omam.wire.CastDeviceVolume.VolumeControlType;
-import io.omam.wire.Payloads.Message;
+import io.omam.wire.Payloads.AnyPayload;
 import io.omam.wire.ReceiverController.AppAvailabilityReq;
 import io.omam.wire.ReceiverController.AppAvailabilityResp;
 import io.omam.wire.ReceiverController.ApplicationData;
@@ -85,12 +85,29 @@ import io.omam.wire.ReceiverController.ReceiverStatus;
 import io.omam.wire.ReceiverController.SetVolumeLevel;
 import io.omam.wire.ReceiverController.SetVolumeMuted;
 import io.omam.wire.ReceiverController.Stop;
+import io.omam.wire.media.MediaController;
 
 /**
  * An emulated Cast device that implements the Cast V2 Protocol an behaves as closely as possible as an real device
  * (audio) running 1.30 firmware.
  */
 final class EmulatedCastDevice implements AutoCloseable {
+
+    /**
+     * Invalid Request message payload.
+     */
+    private static final class InvalidRequest extends Payload {
+
+        /** unique instance. */
+        static final InvalidRequest INSTANCE = new InvalidRequest();
+
+        /**
+         * Constructor.
+         */
+        private InvalidRequest() {
+            super("INVALID_REQUEST", null);
+        }
+    }
 
     /**
      * A {@link Consumer} that can throw {@link IOException}.
@@ -116,6 +133,38 @@ final class EmulatedCastDevice implements AutoCloseable {
          */
         void tryAccept(final T t) throws IOException;
 
+    }
+
+    /**
+     * Launch Error message payload.
+     */
+    private static final class LaunchError extends Payload {
+
+        /** unique instance. */
+        static final LaunchError INSTANCE = new LaunchError();
+
+        /**
+         * Constructor.
+         */
+        private LaunchError() {
+            super("LAUNCH_ERROR", null);
+        }
+    }
+
+    /**
+     * Pong message payload.
+     */
+    private static final class Pong extends Payload {
+
+        /** unique instance. */
+        static final Pong INSTANCE = new Pong();
+
+        /**
+         * Constructor.
+         */
+        private Pong() {
+            super("PONG", null);
+        }
     }
 
     /** logger. */
@@ -310,9 +359,9 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @throws IOException in case of I/O error
      */
     private void handleGetAppAvailability(final CastMessage message) throws IOException {
-        final Collection<String> ids =
-                parse(message, AppAvailabilityReq.class).map(AppAvailabilityReq::appId).orElseThrow(
-                        IOException::new);
+        final Collection<String> ids = parse(message, AppAvailabilityReq.class)
+            .map(AppAvailabilityReq::appId)
+            .orElseThrow(IOException::new);
         final Map<String, AppAvailability> resp = new HashMap<>();
         for (final String id : ids) {
             final boolean isAvail = avail.stream().anyMatch(a -> a.id().equals(id));
@@ -349,7 +398,7 @@ final class EmulatedCastDevice implements AutoCloseable {
             avail.add(app);
             respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
         } else {
-            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("LAUNCH_ERROR", null)));
+            respond(message, build(RECEIVER_NS, message.getSourceId(), LaunchError.INSTANCE));
         }
     }
 
@@ -360,8 +409,9 @@ final class EmulatedCastDevice implements AutoCloseable {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 final InputStream is = socket.getInputStream();
-                final CastMessage message = CastMessageCodec.read(is).orElseThrow(
-                        () -> new IOException("Could not read received message"));
+                final CastMessage message = CastMessageCodec
+                    .read(is)
+                    .orElseThrow(() -> new IOException("Could not read received message"));
                 receivedMessages.add(message);
                 if (message.getNamespace().equals(AUTH_NS)) {
                     final ByteString resp = rejectAllAuthenticationRequests ? AUTH_ERR : AUTH_OK;
@@ -378,7 +428,7 @@ final class EmulatedCastDevice implements AutoCloseable {
                 } else if (is(message, "CLOSE")) {
                     break;
                 } else {
-                    final String type = parse(message, Message.class)
+                    final String type = parse(message, AnyPayload.class)
                         .map(m -> m.responseType().orElseGet(() -> m.type().orElse(null)))
                         .orElseThrow(IOException::new);
                     handlers.getOrDefault(type, t -> {
@@ -417,7 +467,7 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @throws IOException in case of I/O error
      */
     private void handlePing(final CastMessage message) throws IOException {
-        send(build(HEARTBEAT_NS, message.getSourceId(), new Message("PONG", null)));
+        send(build(HEARTBEAT_NS, message.getSourceId(), Pong.INSTANCE));
     }
 
     /**
@@ -448,7 +498,7 @@ final class EmulatedCastDevice implements AutoCloseable {
             respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
             send(build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
         } else {
-            respond(message, build(RECEIVER_NS, message.getSourceId(), new Message("INVALID_REQUEST", null)));
+            respond(message, build(RECEIVER_NS, message.getSourceId(), InvalidRequest.INSTANCE));
         }
     }
 
@@ -463,7 +513,7 @@ final class EmulatedCastDevice implements AutoCloseable {
     /**
      * Responds to the given request with the given response.
      *
-     * @param request request
+     * @param request  request
      * @param response response
      * @throws IOException in case of I/O error
      */
@@ -472,7 +522,7 @@ final class EmulatedCastDevice implements AutoCloseable {
         final JsonObject obj = elt.getAsJsonObject();
         obj.remove(REQUEST_ID);
         final int reqId =
-                parse(request, Message.class).flatMap(Message::requestId).orElseThrow(AssertionError::new);
+                parse(request, AnyPayload.class).flatMap(Payload::requestId).orElseThrow(AssertionError::new);
         obj.addProperty(REQUEST_ID, reqId);
         send(CastMessage.newBuilder(response).clearPayloadUtf8().setPayloadUtf8(GSON.toJson(elt)).build());
     }

@@ -1,5 +1,5 @@
 /*
-Copyright 2018-2020 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -30,36 +30,37 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-/**
- * Static methods to convert integer to/from Big Endian (network) bytes.
- */
-final class Bytes {
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 
-    /**
-     * Constructor.
-     */
-    private Bytes() {
-        // empty.
+import io.omam.wire.CastChannel.CastMessage;
+
+@SuppressWarnings("javadoc")
+final class DefaultApplicationWire implements ApplicationWire {
+
+    private final CastV2Channel channel;
+
+    DefaultApplicationWire(final CastV2Channel aChannel) {
+        channel = aChannel;
     }
 
-    /**
-     * Converts the given integer into its Big Endian binary representation.
-     *
-     * @param i integer
-     * @return bytes
-     */
-    static byte[] toBytes(final int i) {
-        return new byte[] { (byte) (i >> 24), (byte) (i >> 16), (byte) (i >> 8), (byte) i };
+    @Override
+    public final <T extends Payload> Optional<T> parse(final CastMessage message, final Class<T> clazz) {
+        return Payloads.parse(message, clazz);
     }
 
-    /**
-     * Converts the bytes (Big Endian) into an integer.
-     *
-     * @param bytes bytes
-     * @return integer
-     */
-    static int toInt(final byte[] bytes) {
-        return bytes[0] << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | bytes[3] & 0xFF;
+    @Override
+    public final <T extends Payload> CastMessage request(final String namespace, final String destination,
+            final T payload, final Duration timeout) throws IOException, TimeoutException {
+        return Requestor.stringPayload(channel).request(namespace, destination, payload, timeout);
+    }
+
+    @Override
+    public final <P extends Payload> void send(final String namespace, final String destination, final P payload) {
+        final CastMessage message = Payloads.build(namespace, destination, payload);
+        channel.send(message);
     }
 
 }

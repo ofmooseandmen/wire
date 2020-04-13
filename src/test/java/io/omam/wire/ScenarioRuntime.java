@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -40,7 +40,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import io.omam.halo.Browser;
 import io.omam.halo.Halo;
 import io.omam.halo.Service;
 
@@ -194,7 +193,7 @@ final class ScenarioRuntime implements CastDeviceControllerListener {
                 }
             }
         };
-        try (final Browser browser = CastDeviceController.browse(l)) {
+        try (final CastDeviceBrowser browser = CastDeviceController.browse(l)) {
             await().atMost(10, TimeUnit.SECONDS).until(() -> ctrl != null);
             setup = true;
         }

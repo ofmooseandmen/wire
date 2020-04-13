@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -102,7 +102,7 @@ final class Monitor {
      * Class constructor.
      *
      * @param conditionSatisfied a supplier that returns {@code true} only if condition being monitored is
-     *            satisfied
+     *                           satisfied
      */
     Monitor(final Supplier<Boolean> conditionSatisfied) {
         lock = new ReentrantLock();

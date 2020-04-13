@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -35,7 +35,7 @@ import java.util.Collection;
 /**
  * Describes an application launched on the Cast device.
  *
- * @see CastDeviceController#launchApp(String, java.util.function.Function, java.time.Duration)
+ * @see CastDeviceController#launchApp(String, java.util.function.BiFunction, java.time.Duration)
  */
 public interface Application {
 

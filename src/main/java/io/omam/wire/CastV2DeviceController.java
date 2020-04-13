@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /**
  * {@link CastDeviceController} implementing the CAST V2 protocol.
@@ -59,7 +59,7 @@ final class CastV2DeviceController implements CastDeviceController {
     /**
      * Constructor.
      *
-     * @param aName Cast device name
+     * @param aName    Cast device name
      * @param aChannel communication channel
      */
     CastV2DeviceController(final String aName, final CastV2Channel aChannel) {
@@ -109,16 +109,27 @@ final class CastV2DeviceController implements CastDeviceController {
     }
 
     @Override
+    public final void joinAppSession(final ApplicationController app) {
+        connection.joinAppSession(app.details().transportId());
+    }
+
+    @Override
     public final <T extends ApplicationController> T launchApp(final String appId,
-            final Function<Application, T> controllerSupplier, final Duration timeout)
-            throws IOException, TimeoutException {
+            final BiFunction<Application, ApplicationWire, T> controllerSupplier, final boolean joinAppSession,
+            final Duration timeout) throws IOException, TimeoutException {
         ensureConnected();
         final CastDeviceStatus status = receiver.launch(appId, timeout);
         final Collection<Application> apps = status.applications();
-        final Application app = apps.stream().filter(a -> a.id().equals(appId)).findFirst().orElseThrow(
-                () -> new IOException("Received status does not contain application [" + appId + "]"));
-        final T ctrl = controllerSupplier.apply(app);
-        ctrl.setChannel(channel);
+        final Application app = apps
+            .stream()
+            .filter(a -> a.id().equals(appId))
+            .findFirst()
+            .orElseThrow(() -> new IOException("Received status does not contain application [" + appId + "]"));
+        final T ctrl = controllerSupplier.apply(app, new DefaultApplicationWire(channel));
+        app.namespaces().forEach(ns -> channel.addListener(ctrl, ns.name()));
+        if (joinAppSession) {
+            joinAppSession(ctrl);
+        }
         return ctrl;
     }
 
@@ -145,8 +156,9 @@ final class CastV2DeviceController implements CastDeviceController {
     public final CastDeviceStatus stopApp(final ApplicationController app, final Duration timeout)
             throws IOException, TimeoutException {
         ensureConnected();
+        connection.leaveAppSession(app.details().transportId());
         final CastDeviceStatus cds = receiver.stopApp(app.details().sessionId(), timeout);
-        app.stopped();
+        channel.removeListener(app);
         return cds;
     }
 

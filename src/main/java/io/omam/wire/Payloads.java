@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -39,8 +39,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
 import io.omam.wire.CastChannel.CastMessage;
@@ -53,66 +51,18 @@ import io.omam.wire.CastChannel.CastMessage.ProtocolVersion;
 final class Payloads {
 
     /**
-     * Base class of all CAST V2 messages with a {@code PayloadType.STRING} payload.
-     * <p>
-     * Depending on the message either {@link #type()} or {@link #responseType()} is present. Note that some
-     * response contain {@link #type()} instead of {@link #responseType()}.
+     * Class representing any payload - use for JSON parsing.
      */
-    static class Message {
-
-        /** message type, or null if response. */
-        private final String type;
-
-        /** response type, or null if message or request. */
-        private final String responseType;
-
-        /** request ID, null or 0 when not a request. */
-        private final Integer requestId;
+    static final class AnyPayload extends Payload {
 
         /**
          * Constructor.
          */
-        Message() {
-            this(null, null);
-        }
-
-        /**
-         * Constructor.
-         *
-         * @param aType type
-         * @param aResponseType response type
-         */
-        Message(final String aType, final String aResponseType) {
-            type = aType;
-            responseType = aResponseType;
-            requestId = null;
-        }
-
-        /**
-         * @return the Id of the request, used to correlate request/response, if present.
-         */
-        final Optional<Integer> requestId() {
-            return requestId == null || requestId == 0 ? Optional.empty() : Optional.of(requestId);
-        }
-
-        /**
-         * @return the response type, if present.
-         */
-        final Optional<String> responseType() {
-            return Optional.ofNullable(responseType);
-        }
-
-        /**
-         * @return the message type, if present.
-         */
-        final Optional<String> type() {
-            return Optional.ofNullable(type);
+        AnyPayload() {
+            // empty.
         }
 
     }
-
-    /** JSON request ID property. */
-    private static final String REQUEST_ID = "requestId";
 
     /** request id counter. */
     private static final AtomicInteger NEXT_REQUEST_ID = new AtomicInteger(0);
@@ -131,29 +81,15 @@ final class Payloads {
     }
 
     /**
-     * Adds a request ID to the JSON payload of the given message.
-     *
-     * @param message message
-     * @return the resulting message
-     */
-    static CastMessage addRequestId(final CastMessage message) {
-        final JsonElement elt = GSON.fromJson(message.getPayloadUtf8(), JsonElement.class);
-        final JsonObject obj = elt.getAsJsonObject();
-        obj.remove(REQUEST_ID);
-        obj.addProperty(REQUEST_ID, NEXT_REQUEST_ID.incrementAndGet());
-        return CastMessage.newBuilder(message).clearPayloadUtf8().setPayloadUtf8(GSON.toJson(elt)).build();
-    }
-
-    /**
      * Returns a new {@link CastMessage} for the given destination with the given namespace and payload.
      *
-     * @param namespace namespace
-     * @param payload payload
-     * @param <T> type of the payload
+     * @param namespace   namespace
+     * @param payload     payload
+     * @param <T>         type of the payload
      * @param destination destination ID
      * @return a new {@link CastMessage}
      */
-    static <T extends Message> CastMessage build(final String namespace, final String destination,
+    static <T extends Payload> CastMessage build(final String namespace, final String destination,
             final T payload) {
         return CastMessage
             .newBuilder()
@@ -171,34 +107,43 @@ final class Payloads {
      * namespace and payload.
      *
      * @param namespace namespace
-     * @param payload payload
-     * @param <T> type of the payload
+     * @param payload   payload
+     * @param <T>       type of the payload
      * @return a new {@link CastMessage}
      */
-    static <T extends Message> CastMessage build(final String namespace, final T payload) {
+    static <T extends Payload> CastMessage build(final String namespace, final T payload) {
         return build(namespace, DEFAULT_RECEIVER_ID, payload);
     }
 
     /**
      * Determines whether the given message has the given type.
      *
-     * @param msg message
+     * @param msg  message
      * @param type type
      * @return {@code true} if given message has the given type
      */
     static boolean is(final CastMessage msg, final String type) {
-        return GSON.fromJson(msg.getPayloadUtf8(), Message.class).type().map(t -> t.equals(type)).orElse(false);
+        return GSON.fromJson(msg.getPayloadUtf8(), AnyPayload.class).type().map(t -> t.equals(type)).orElse(false);
+    }
+
+    /**
+     * Returns the next request ID to set into the payload of a request.
+     *
+     * @return the next request ID
+     */
+    static int nextRequestId() {
+        return NEXT_REQUEST_ID.incrementAndGet();
     }
 
     /**
      * Obtains an instance of {@code T} from the payload of the given message.
      *
-     * @param <T> the type of the desired object
-     * @param msg message
+     * @param <T>   the type of the desired object
+     * @param msg   message
      * @param clazz the class of {@code T}
      * @return the parsed status, empty if given message could not be parsed
      */
-    static <T extends Message> Optional<T> parse(final CastMessage msg, final Class<T> clazz) {
+    static <T extends Payload> Optional<T> parse(final CastMessage msg, final Class<T> clazz) {
         try {
             final String payload = msg.getPayloadUtf8();
             if (payload == null || payload.isEmpty()) {
@@ -206,9 +151,10 @@ final class Payloads {
                 return Optional.empty();
             }
             return Optional.of(GSON.fromJson(payload, clazz));
-        } catch (final JsonSyntaxException e) {
-            LOGGER.log(Level.WARNING, e,
-                    () -> "Could not parse [" + msg.getPayloadUtf8() + "] into an instance of Message");
+        } catch (final JsonSyntaxException | ClassCastException | IllegalArgumentException e) {
+            LOGGER
+                .log(Level.WARNING, e,
+                        () -> "Could not parse [" + msg.getPayloadUtf8() + "] into an instance of Message");
             return Optional.empty();
         }
     }

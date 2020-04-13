@@ -30,36 +30,72 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
+import java.util.Optional;
+
 /**
- * Static methods to convert integer to/from Big Endian (network) bytes.
+ * Base class of all CAST V2 {@code PayloadType.STRING} payloads.
+ * <p>
+ * Depending on the message either {@link #type()} or {@link #responseType()} is present. Note that some response
+ * contain {@link #type()} instead of {@link #responseType()}.
  */
-final class Bytes {
+public abstract class Payload {
+
+    /** message type, or null if response. */
+    private final String type;
+
+    /** response type, or null if message or request. */
+    private final String responseType;
+
+    /** request ID, null or 0 when not a request. */
+    private Integer requestId;
 
     /**
      * Constructor.
      */
-    private Bytes() {
-        // empty.
+    public Payload() {
+        this(null, null);
     }
 
     /**
-     * Converts the given integer into its Big Endian binary representation.
+     * Constructor.
      *
-     * @param i integer
-     * @return bytes
+     * @param aType         type
+     * @param aResponseType response type
      */
-    static byte[] toBytes(final int i) {
-        return new byte[] { (byte) (i >> 24), (byte) (i >> 16), (byte) (i >> 8), (byte) i };
+    protected Payload(final String aType, final String aResponseType) {
+        type = aType;
+        responseType = aResponseType;
+        requestId = null;
     }
 
     /**
-     * Converts the bytes (Big Endian) into an integer.
-     *
-     * @param bytes bytes
-     * @return integer
+     * @return the Id of the request, used to correlate request/response, if present.
      */
-    static int toInt(final byte[] bytes) {
-        return bytes[0] << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | bytes[3] & 0xFF;
+    final Optional<Integer> requestId() {
+        return requestId == null || requestId == 0 ? Optional.empty() : Optional.of(requestId);
+    }
+
+    /**
+     * @return the response type, if present.
+     */
+    final Optional<String> responseType() {
+        return Optional.ofNullable(responseType);
+    }
+
+    /**
+     * Sets the request ID of this payload.
+     *
+     * @param aRequestId request ID
+     */
+    final void setRequestId(final int aRequestId) {
+        requestId = aRequestId;
+    }
+
+    /**
+     * @return the message type, if present.
+     */
+    final Optional<String> type() {
+        return Optional.ofNullable(type);
     }
 
 }

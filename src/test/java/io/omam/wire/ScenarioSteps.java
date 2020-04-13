@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -37,7 +37,7 @@ import java.time.Instant;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import cucumber.api.java8.En;
+import io.cucumber.java8.En;
 
 /**
  * Steps to log start/end of scenario.
@@ -66,12 +66,13 @@ public final class ScenarioSteps implements En {
                 + rt().events().stream().map(e -> e.type().toString()).collect(Collectors.joining(", "))
                 + "]", rt().events().isEmpty());
             rt().controller().close();
-            LOGGER.info(() -> "Scenario '"
-                + scenario.getName()
-                + "' ended @ "
-                + Instant.now()
-                + " with status "
-                + scenario.getStatus());
+            LOGGER
+                .info(() -> "Scenario '"
+                    + scenario.getName()
+                    + "' ended @ "
+                    + Instant.now()
+                    + " with status "
+                    + scenario.getStatus());
         });
 
     }

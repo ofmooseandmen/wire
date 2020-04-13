@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2018-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -78,9 +78,9 @@ final class CastMessageCodec {
 
     /**
      * Writes the given message to the given output stream.
-     * 
+     *
      * @param message message to write
-     * @param os output stream
+     * @param os      output stream
      * @throws IOException in case of I/O error
      */
     static void write(final CastMessage message, final OutputStream os) throws IOException {

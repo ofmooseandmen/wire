@@ -161,7 +161,7 @@ ext.eclipsePrefs = { p ->
     p.put("org.eclipse.jdt.core.formatter.comment.format_javadoc_comments", "true")
     p.put("org.eclipse.jdt.core.formatter.comment.format_line_comments", "true")
     p.put("org.eclipse.jdt.core.formatter.comment.format_source_code", "true")
-    p.put("org.eclipse.jdt.core.formatter.comment.indent_parameter_description", "true")
+    p.put("org.eclipse.jdt.core.formatter.comment.indent_parameter_description", "false")
     p.put("org.eclipse.jdt.core.formatter.comment.indent_root_tags", "true")
     p.put("org.eclipse.jdt.core.formatter.comment.insert_new_line_before_root_tags", "insert")
     p.put("org.eclipse.jdt.core.formatter.comment.insert_new_line_for_parameter", "do not insert")

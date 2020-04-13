@@ -1,4 +1,3 @@
-# this file is greatly inspired by https://github.com/junit-team/junit5/blob/master/.travis.yml
 language: java
 
 sudo: false
@@ -9,15 +8,14 @@ matrix:
         - os: linux
           jdk: openjdk8
         - os: linux
-          jdk: openjdk9
+          jdk: openjdk11
+          env: JACOCO='-PenableJaCoCo'
         - os: linux
-          jdk: openjdk10
-          env: JACOCO='-PenableJaCoCo' 
+          jdk: openjdk14
         - os: linux
           jdk: openjdk-ea
-        - os: osx
-          jdk: openjdk10
     allow_failures:
+        - jdk: openjdk-14
         - jdk: openjdk-ea  
 
 script:

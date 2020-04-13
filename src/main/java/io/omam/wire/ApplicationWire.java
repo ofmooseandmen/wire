@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -30,57 +30,43 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-import static io.omam.wire.Payloads.addRequestId;
-import static io.omam.wire.Payloads.parse;
-
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiPredicate;
 
 import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payloads.Message;
 
-/**
- * A {@code StandardRequestor} transmits a request to the device and awaits for a correlated response assuming that
- * both the request and response JSON payload contain a {@code requestId} attribute.
- * <p>
- * This class is not thread-safe.
- */
-final class StandardRequestor {
+@SuppressWarnings("javadoc")
+public interface ApplicationWire {
 
-    /** request/response correlation predicate. */
-    private static final BiPredicate<CastMessage, CastMessage> CORRELATOR = (req, resp) -> {
-        final Optional<Message> pReq = parse(req, Message.class);
-        final Optional<Message> pResp = parse(resp, Message.class);
-        if (pReq.isPresent() && pResp.isPresent()) {
-            return pReq.get().requestId().isPresent() && pReq.get().requestId().equals(pResp.get().requestId());
-        }
-        return false;
-    };
-
-    /** requestor. */
-    private final Requestor requestor;
+    <T extends Payload> Optional<T> parse(final CastMessage message, final Class<T> clazz);
 
     /**
-     * Constructor.
+     * Sends the given request and await for a correlated response using the standard request ID mechanism.
+     * <p>
+     * This method assumes that both the request and response JSON payload contain a {@code requestId} attribute.
      *
-     * @param aChannel communication channel
+     * @param namespace
+     * @param destination
+     * @param payload
+     * @param <T>
+     * @param timeout     response timeout
+     * @return received response
+     * @throws IOException
+     * @throws TimeoutException if the timeout elapsed before the response was received
      */
-    StandardRequestor(final CastV2Channel aChannel) {
-        requestor = new Requestor(aChannel, CORRELATOR);
-    }
+    <T extends Payload> CastMessage request(final String namespace, final String destination, final T payload,
+            final Duration timeout) throws IOException, TimeoutException;
 
     /**
-     * Transmits a new request and returns the received response
+     * Sends a message (i.e. not expecting a response) to the application.
      *
-     * @param request the request to transmit
-     * @param timeout status timeout
-     * @return the received response, never null
-     * @throws TimeoutException if the timeout has elapsed before a response was received
+     * @param namespace
+     * @param destination
+     * @param payload
+     * @param <T>
      */
-    final CastMessage request(final CastMessage request, final Duration timeout) throws TimeoutException {
-        return requestor.request(addRequestId(request), timeout);
-    }
+    <T extends Payload> void send(final String namespace, final String destination, final T payload);
 
 }
