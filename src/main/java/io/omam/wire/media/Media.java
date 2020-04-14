@@ -37,8 +37,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
-import io.omam.wire.Payload;
-
 /**
  * Represents the media information.
  * <p>
@@ -48,7 +46,7 @@ import io.omam.wire.Payload;
  *      "https://developers.google.com/cast/docs/reference/receiver/cast.receiver.media.MediaInformation">Google
  *      Cast Reference: MediaInformation</a>
  */
-public final class Media extends Payload {
+public final class Media {
 
     /**
      * Media stream types.
