@@ -79,17 +79,16 @@ final class Requestor<T> implements ChannelListener {
     private static final BiPredicate<CastMessage, CastMessage> ALWAYS_CORRELATED = (a, b) -> true;
 
     /** CastMessage builder from binary payload. */
-    private static final CastMessageBuilder<MessageLite> BINARY_PAYLOAD = (namespace, destination, payload) -> {
-        return CastMessage
-            .newBuilder()
-            .setProtocolVersion(CastMessage.ProtocolVersion.CASTV2_1_0)
-            .setSourceId(SENDER_ID)
-            .setDestinationId(destination)
-            .setNamespace(namespace)
-            .setPayloadType(CastMessage.PayloadType.BINARY)
-            .setPayloadBinary(payload.toByteString())
-            .build();
-    };
+    private static final CastMessageBuilder<MessageLite> BINARY_PAYLOAD =
+            (namespace, destination, payload) -> CastMessage
+                .newBuilder()
+                .setProtocolVersion(CastMessage.ProtocolVersion.CASTV2_1_0)
+                .setSourceId(SENDER_ID)
+                .setDestinationId(destination)
+                .setNamespace(namespace)
+                .setPayloadType(CastMessage.PayloadType.BINARY)
+                .setPayloadBinary(payload.toByteString())
+                .build();
 
     /** CastMessage builder from String payload. */
     private static final CastMessageBuilder<Payload> STRING_PAYLOAD = (namespace, destination, payload) -> {
@@ -123,10 +122,10 @@ final class Requestor<T> implements ChannelListener {
     /**
      * Constructor.
      *
-     * @param aChannel    communication channel
-     * @param aBuilder    CastMessage builder
+     * @param aChannel communication channel
+     * @param aBuilder CastMessage builder
      * @param aCorrelator a {@code BiPredicate} that accepts a request and a received message and returns
-     *                    {@code true} if that latter is correlated with the request
+     *            {@code true} if that latter is correlated with the request
      */
     private Requestor(final CastV2Channel aChannel, final CastMessageBuilder<T> aBuilder,
             final BiPredicate<CastMessage, CastMessage> aCorrelator) {
@@ -172,10 +171,10 @@ final class Requestor<T> implements ChannelListener {
     /**
      * Transmits the given request and returns the received response.
      *
-     * @param namespace   request namespace
+     * @param namespace request namespace
      * @param destination request destination
-     * @param payload     request payload
-     * @param timeout     status timeout
+     * @param payload request payload
+     * @param timeout status timeout
      * @return the received response, never null
      * @throws TimeoutException if the timeout has elapsed before a response was received
      */
@@ -189,8 +188,8 @@ final class Requestor<T> implements ChannelListener {
      * received response.
      *
      * @param namespace request namespace
-     * @param payload   request payload
-     * @param timeout   status timeout
+     * @param payload request payload
+     * @param timeout status timeout
      * @return the received response, never null
      * @throws TimeoutException if the timeout has elapsed before a response was received
      */

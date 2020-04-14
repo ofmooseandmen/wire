@@ -59,7 +59,7 @@ public abstract class Payload {
     /**
      * Constructor.
      *
-     * @param aType         type
+     * @param aType type
      * @param aResponseType response type
      */
     protected Payload(final String aType, final String aResponseType) {

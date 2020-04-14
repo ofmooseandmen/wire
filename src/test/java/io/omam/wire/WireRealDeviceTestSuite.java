@@ -64,8 +64,8 @@ public final class WireRealDeviceTestSuite {
      * Reads 'logging.properties', configures all Loggers and browses the local network for a real Cast device.
      *
      * @throws SecurityException if a security manager exists and if the caller does not have
-     *                           LoggingPermission("control")
-     * @throws Exception         if test environment setup fails
+     *             LoggingPermission("control")
+     * @throws Exception if test environment setup fails
      */
     @BeforeClass
     public static void before() throws Exception {

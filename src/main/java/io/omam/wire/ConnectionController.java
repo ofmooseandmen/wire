@@ -312,7 +312,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
      * connection timeout has elapsed.
      *
      * @param timeout connection timeout
-     * @throws IOException      in case of I/O error (including authentication error)
+     * @throws IOException in case of I/O error (including authentication error)
      * @throws TimeoutException if the timeout has elapsed before the connection could be opened
      */
     final void connect(final Duration timeout) throws IOException, TimeoutException {
@@ -370,16 +370,6 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         return state == State.OPENED;
     }
 
-    /**
-     * Removes the given listener so that it no longer receives connection events.
-     *
-     * @param listener listener, not null
-     */
-    final void removeListener(final ConnectionListener listener) {
-        Objects.requireNonNull(listener);
-        listeners.remove(listener);
-    }
-
     @SuppressWarnings("javadoc")
     final void joinAppSession(final String transpordId) {
         synchronized (sessions) {
@@ -399,9 +389,19 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     }
 
     /**
+     * Removes the given listener so that it no longer receives connection events.
+     *
+     * @param listener listener, not null
+     */
+    final void removeListener(final ConnectionListener listener) {
+        Objects.requireNonNull(listener);
+        listeners.remove(listener);
+    }
+
+    /**
      * Closes the connection with the Cast device.
      *
-     * @param closer   method to close the channel
+     * @param closer method to close the channel
      * @param notifier method to notify the listener
      */
     private final void close(final Consumer<CastV2Channel> closer, final Consumer<ConnectionListener> notifier) {

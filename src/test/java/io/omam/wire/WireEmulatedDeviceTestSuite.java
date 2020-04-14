@@ -66,8 +66,8 @@ public final class WireEmulatedDeviceTestSuite {
      * controller.
      *
      * @throws SecurityException if a security manager exists and if the caller does not have
-     *                           LoggingPermission("control")
-     * @throws Exception         if test environment setup fails
+     *             LoggingPermission("control")
+     * @throws Exception if test environment setup fails
      */
     @BeforeClass
     public static void before() throws Exception {

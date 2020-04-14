@@ -138,14 +138,14 @@ final class ReceiverController implements ChannelListener {
         /**
          * Constructor.
          *
-         * @param anAppId             {@link #id()}
-         * @param aDisplayName        {@link #name()}
-         * @param idleScreen          {@link #isIdleScreen()}
+         * @param anAppId {@link #id()}
+         * @param aDisplayName {@link #name()}
+         * @param idleScreen {@link #isIdleScreen()}
          * @param isLaunchedFromCloud {@link #launchedFromCloud()}
-         * @param someNamespaces      {@link #namespaces()}
-         * @param aSessionId          {@link #sessionId()}
-         * @param aStatusText         {@link #statusText()}
-         * @param aTransportId        {@link #transportId()}
+         * @param someNamespaces {@link #namespaces()}
+         * @param aSessionId {@link #sessionId()}
+         * @param aStatusText {@link #statusText()}
+         * @param aTransportId {@link #transportId()}
          */
         ApplicationData(final String anAppId, final String aDisplayName, final boolean idleScreen,
                 final boolean isLaunchedFromCloud, final Collection<NamespaceData> someNamespaces,
@@ -222,9 +222,9 @@ final class ReceiverController implements ChannelListener {
         /**
          * Constructor.
          *
-         * @param aControlType  control type
-         * @param aLevel        level
-         * @param isMuted       muted?
+         * @param aControlType control type
+         * @param aLevel level
+         * @param isMuted muted?
          * @param aStepInterval volume step interval
          */
         CastDeviceVolumeData(final VolumeControlType aControlType, final double aLevel, final boolean isMuted,
@@ -311,7 +311,7 @@ final class ReceiverController implements ChannelListener {
          * Constructor.
          *
          * @param someApplications applications
-         * @param aVolume          volume
+         * @param aVolume volume
          */
         ReceiverStatus(final List<ApplicationData> someApplications, final CastDeviceVolumeData aVolume) {
             super("GET_STATUS", null);
@@ -443,7 +443,7 @@ final class ReceiverController implements ChannelListener {
          * Constructor.
          *
          * @param someApplications applications
-         * @param aVolume          volume
+         * @param aVolume volume
          */
         ReceiverStatusData(final List<ApplicationData> someApplications, final CastDeviceVolumeData aVolume) {
             applications = someApplications;
@@ -547,8 +547,8 @@ final class ReceiverController implements ChannelListener {
     /**
      * Parses the content of the given {@code resp} into a message of the given type.
      *
-     * @param <T>   response type
-     * @param resp  unparsed response
+     * @param <T> response type
+     * @param resp unparsed response
      * @param clazz response class
      * @return a new response of the given type
      * @throws IOException if the response is an error
@@ -590,12 +590,12 @@ final class ReceiverController implements ChannelListener {
     /**
      * Request and returns the availability of the given applications.
      *
-     * @param appIds  ID of each application
+     * @param appIds ID of each application
      * @param timeout status timeout
      * @return the availability of the given applications, never null
-     * @throws IOException      in case of I/O error (including if connection has not be opened)
+     * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
-     *                          received
+     *             received
      */
     final AppAvailabilities appAvailability(final Collection<String> appIds, final Duration timeout)
             throws IOException, TimeoutException {
@@ -607,10 +607,10 @@ final class ReceiverController implements ChannelListener {
     /**
      * Request the launch of the given application and returns the received status of the Cast device.
      *
-     * @param appId   application ID
+     * @param appId application ID
      * @param timeout status timeout
      * @return the status of the Cast device, never null
-     * @throws IOException      if the received response is an error or cannot be parsed
+     * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
     final CastDeviceStatus launch(final String appId, final Duration timeout)
@@ -624,7 +624,7 @@ final class ReceiverController implements ChannelListener {
      *
      * @param timeout timeout
      * @return the received response, never null
-     * @throws IOException      if the received response is an error or cannot be parsed
+     * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
     final CastDeviceStatus mute(final Duration timeout) throws IOException, TimeoutException {
@@ -638,7 +638,7 @@ final class ReceiverController implements ChannelListener {
      *
      * @param timeout status timeout
      * @return the status of the Cast device, never null
-     * @throws IOException      if the received response is an error or cannot be parsed
+     * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
     final CastDeviceStatus receiverStatus(final Duration timeout) throws IOException, TimeoutException {
@@ -659,10 +659,10 @@ final class ReceiverController implements ChannelListener {
     /**
      * Sets the volume level of the device.
      *
-     * @param level   the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
+     * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
      * @param timeout response timeout
      * @return the received response, never null
-     * @throws IOException      if the received response is an error or cannot be parsed
+     * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
     final CastDeviceStatus setVolume(final double level, final Duration timeout)
@@ -677,9 +677,9 @@ final class ReceiverController implements ChannelListener {
      * the received status of the Cast device.
      *
      * @param sessionId application session ID
-     * @param timeout   status timeout
+     * @param timeout status timeout
      * @return the status of the Cast device, never null
-     * @throws IOException      if the received response is an error or cannot be parsed
+     * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
     final CastDeviceStatus stopApp(final String sessionId, final Duration timeout)
@@ -694,7 +694,7 @@ final class ReceiverController implements ChannelListener {
      *
      * @param timeout timeout
      * @return the received response, never null
-     * @throws IOException      if the received response is an error or cannot be parsed
+     * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
     final CastDeviceStatus unmute(final Duration timeout) throws IOException, TimeoutException {

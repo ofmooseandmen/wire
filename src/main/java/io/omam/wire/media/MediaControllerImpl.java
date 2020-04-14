@@ -85,7 +85,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
      * Constructor.
      *
      * @param someDetails application details
-     * @param aWire       application wire
+     * @param aWire application wire
      */
     public MediaControllerImpl(final Application someDetails, final ApplicationWire aWire) {
         super(someDetails);

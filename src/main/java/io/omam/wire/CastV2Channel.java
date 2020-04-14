@@ -233,7 +233,7 @@ final class CastV2Channel implements AutoCloseable {
      * Constructor.
      *
      * @param address device address
-     * @param port    device port
+     * @param port device port
      */
     private CastV2Channel(final InetAddress address, final int port, final SSLContext sslContext) {
         ias = new InetSocketAddress(address, port);
@@ -250,7 +250,7 @@ final class CastV2Channel implements AutoCloseable {
      * Creates a new TLS channel.
      *
      * @param address device address
-     * @param port    device port
+     * @param port device port
      * @return a new TLS channel
      * @throws GeneralSecurityException in case of security error
      */
@@ -270,7 +270,7 @@ final class CastV2Channel implements AutoCloseable {
     /**
      * Adds the given listener to receive messages from the given namespace.
      *
-     * @param listener  listener
+     * @param listener listener
      * @param namespace namespace
      */
     final void addListener(final ChannelListener listener, final String namespace) {

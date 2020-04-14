@@ -59,7 +59,7 @@ final class CastV2DeviceController implements CastDeviceController {
     /**
      * Constructor.
      *
-     * @param aName    Cast device name
+     * @param aName Cast device name
      * @param aChannel communication channel
      */
     CastV2DeviceController(final String aName, final CastV2Channel aChannel) {

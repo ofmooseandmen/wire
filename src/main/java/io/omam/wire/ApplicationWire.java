@@ -51,7 +51,7 @@ public interface ApplicationWire {
      * @param destination
      * @param payload
      * @param <T>
-     * @param timeout     response timeout
+     * @param timeout response timeout
      * @return received response
      * @throws IOException
      * @throws TimeoutException if the timeout elapsed before the response was received

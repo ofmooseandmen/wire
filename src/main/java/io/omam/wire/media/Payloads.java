@@ -85,10 +85,10 @@ final class Payloads {
         /**
          * Constructor.
          *
-         * @param aSessionId    session ID
-         * @param aMedia        media
-         * @param isAutoplay    true if media should be played when loaded
-         * @param aCurrentTime  current time
+         * @param aSessionId session ID
+         * @param aMedia media
+         * @param isAutoplay true if media should be played when loaded
+         * @param aCurrentTime current time
          * @param someQueueData queue data, null if no queue
          */
         Load(final String aSessionId, final MediaData aMedia, final boolean isAutoplay, final double aCurrentTime,
@@ -255,7 +255,7 @@ final class Payloads {
         /**
          * Constructor.
          *
-         * @param someItems   list of queue items
+         * @param someItems list of queue items
          * @param aRepeatMode queue repeat mode
          */
         QueueData(final List<QueueItem> someItems, final RepeatMode aRepeatMode) {

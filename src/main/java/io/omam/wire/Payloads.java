@@ -83,9 +83,9 @@ final class Payloads {
     /**
      * Returns a new {@link CastMessage} for the given destination with the given namespace and payload.
      *
-     * @param namespace   namespace
-     * @param payload     payload
-     * @param <T>         type of the payload
+     * @param namespace namespace
+     * @param payload payload
+     * @param <T> type of the payload
      * @param destination destination ID
      * @return a new {@link CastMessage}
      */
@@ -107,8 +107,8 @@ final class Payloads {
      * namespace and payload.
      *
      * @param namespace namespace
-     * @param payload   payload
-     * @param <T>       type of the payload
+     * @param payload payload
+     * @param <T> type of the payload
      * @return a new {@link CastMessage}
      */
     static <T extends Payload> CastMessage build(final String namespace, final T payload) {
@@ -118,7 +118,7 @@ final class Payloads {
     /**
      * Determines whether the given message has the given type.
      *
-     * @param msg  message
+     * @param msg message
      * @param type type
      * @return {@code true} if given message has the given type
      */
@@ -138,8 +138,8 @@ final class Payloads {
     /**
      * Obtains an instance of {@code T} from the payload of the given message.
      *
-     * @param <T>   the type of the desired object
-     * @param msg   message
+     * @param <T> the type of the desired object
+     * @param msg message
      * @param clazz the class of {@code T}
      * @return the parsed status, empty if given message could not be parsed
      */

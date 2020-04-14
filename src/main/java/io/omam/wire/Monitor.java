@@ -102,7 +102,7 @@ final class Monitor {
      * Class constructor.
      *
      * @param conditionSatisfied a supplier that returns {@code true} only if condition being monitored is
-     *                           satisfied
+     *            satisfied
      */
     Monitor(final Supplier<Boolean> conditionSatisfied) {
         lock = new ReentrantLock();

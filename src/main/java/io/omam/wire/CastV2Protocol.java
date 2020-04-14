@@ -92,7 +92,7 @@ public final class CastV2Protocol {
     /**
      * Returns the {@code Duration} corresponding to the given key.
      *
-     * @param key   property key
+     * @param key property key
      * @param props properties default values
      * @return value
      */
@@ -103,7 +103,7 @@ public final class CastV2Protocol {
     /**
      * Returns the {@code int} corresponding to the given key.
      *
-     * @param key   property key
+     * @param key property key
      * @param props properties default values
      * @return value
      */
@@ -114,7 +114,7 @@ public final class CastV2Protocol {
     /**
      * Returns the {@code String} corresponding to the given key.
      *
-     * @param key   property key
+     * @param key property key
      * @param props properties default values
      * @return value
      */

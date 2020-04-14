@@ -524,7 +524,7 @@ final class EmulatedCastDevice implements AutoCloseable {
     /**
      * Responds to the given request with the given response.
      *
-     * @param request  request
+     * @param request request
      * @param response response
      * @throws IOException in case of I/O error
      */

@@ -44,6 +44,7 @@ import io.omam.wire.media.Payloads.MediaData;
  *      "https://developers.google.com/cast/docs/reference/receiver/cast.receiver.media.MediaInformation">Google
  *      Cast Reference: MediaInformation</a>
  */
+// FIXME make this a class with fromUrl, fromLiveUrl, a constructor. MediaController takes only List<Media>
 public interface Media {
 
     /**
@@ -64,9 +65,9 @@ public interface Media {
     /**
      * Returns a new {@link Media}, that can be loaded into the device.
      *
-     * @param contentId   {@link Media#contentId()}
+     * @param contentId {@link Media#contentId()}
      * @param contentType {@link Media#contentType()}
-     * @param streamType  {@link Media#streamType()}
+     * @param streamType {@link Media#streamType()}
      * @return a new {@link Media}
      */
     static Media newInstance(final String contentId, final String contentType, final StreamType streamType) {

@@ -80,7 +80,7 @@ final class CastMessageCodec {
      * Writes the given message to the given output stream.
      *
      * @param message message to write
-     * @param os      output stream
+     * @param os output stream
      * @throws IOException in case of I/O error
      */
     static void write(final CastMessage message, final OutputStream os) throws IOException {
