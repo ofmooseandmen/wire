@@ -1,0 +1,5 @@
+image: Visual Studio 2019 Preview
+
+build_script:
+  - gradlew --no-daemon -version
+  - gradlew --no-daemon --stacktrace build

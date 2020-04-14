@@ -14,6 +14,8 @@ matrix:
           jdk: openjdk14
         - os: linux
           jdk: openjdk-ea
+        - os: osx
+          jdk: openjdk11
     allow_failures:
         - jdk: openjdk14
         - jdk: openjdk-ea  
