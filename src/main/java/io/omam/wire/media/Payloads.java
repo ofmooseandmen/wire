@@ -71,7 +71,7 @@ final class Payloads {
         private final String sessionId;
 
         /** media. */
-        private final MediaData media;
+        private final Media media;
 
         /** true if media should be played when loaded. */
         private final boolean autoplay;
@@ -91,7 +91,7 @@ final class Payloads {
          * @param aCurrentTime current time
          * @param someQueueData queue data, null if no queue
          */
-        Load(final String aSessionId, final MediaData aMedia, final boolean isAutoplay, final double aCurrentTime,
+        Load(final String aSessionId, final Media aMedia, final boolean isAutoplay, final double aCurrentTime,
                 final QueueData someQueueData) {
             super("LOAD", null);
             sessionId = aSessionId;
@@ -99,44 +99,6 @@ final class Payloads {
             autoplay = isAutoplay;
             currentTime = aCurrentTime;
             queueData = someQueueData;
-        }
-    }
-
-    static final class MediaData implements Media {
-
-        private final String contentId;
-
-        private final StreamType streamType;
-
-        private final Double duration;
-
-        private final String contentType;
-
-        MediaData(final String aContentId, final String aContentType, final StreamType aStreamType) {
-            contentId = aContentId;
-            duration = null;
-            contentType = aContentType;
-            streamType = aStreamType;
-        }
-
-        @Override
-        public final String contentId() {
-            return contentId;
-        }
-
-        @Override
-        public final String contentType() {
-            return contentType;
-        }
-
-        @Override
-        public final Optional<Duration> duration() {
-            return duration == null ? Optional.empty() : Optional.of(toDuration(duration));
-        }
-
-        @Override
-        public final StreamType streamType() {
-            return streamType;
         }
     }
 
@@ -148,7 +110,7 @@ final class Payloads {
 
         private List<QueueItemData> items;
 
-        private MediaData media;
+        private Media media;
 
         private int mediaSessionId;
 
@@ -269,13 +231,13 @@ final class Payloads {
 
         private final boolean autoplay;
 
-        private final MediaData media;
+        private final Media media;
 
         private final double preloadTime;
 
         private final double startTime;
 
-        QueueItemData(final boolean isAutoplay, final MediaData aMedia, final double aPreloadTime,
+        QueueItemData(final boolean isAutoplay, final Media aMedia, final double aPreloadTime,
                 final double aStartTime) {
             autoplay = isAutoplay;
             media = aMedia;

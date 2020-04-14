@@ -33,18 +33,13 @@ package io.omam.wire.media;
 import static io.omam.wire.CastV2Protocol.REQUEST_TIMEOUT;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import io.omam.wire.Application;
 import io.omam.wire.ApplicationController;
 import io.omam.wire.ApplicationWire;
-import io.omam.wire.media.Media.StreamType;
 
 /**
  * Default Media Receiver controller.
@@ -66,6 +61,15 @@ public interface MediaController extends ApplicationController {
         return new MediaControllerImpl(appDetails, wire);
     }
 
+    default MediaStatus load(final List<Media> medias) throws IOException, TimeoutException {
+        return load(medias, REQUEST_TIMEOUT);
+    }
+
+    default MediaStatus load(final List<Media> medias, final Duration timeout)
+            throws IOException, TimeoutException {
+        return load(medias, RepeatMode.REPEAT_OFF, true, timeout);
+    }
+
     default MediaStatus load(final List<Media> medias, final RepeatMode repeatMode, final boolean autoplay)
             throws IOException, TimeoutException {
         return load(medias, repeatMode, autoplay, REQUEST_TIMEOUT);
@@ -73,37 +77,6 @@ public interface MediaController extends ApplicationController {
 
     MediaStatus load(final List<Media> medias, final RepeatMode repeatMode, final boolean autoplay,
             final Duration timeout) throws IOException, TimeoutException;
-
-    default MediaStatus load(final List<String> urls) throws IOException, TimeoutException {
-        return load(urls, REQUEST_TIMEOUT);
-    }
-
-    default MediaStatus load(final List<String> urls, final Duration timeout)
-            throws IOException, TimeoutException {
-        return load(urls, RepeatMode.REPEAT_OFF, timeout);
-    }
-
-    default MediaStatus load(final List<String> urls, final RepeatMode repeatMode)
-            throws IOException, TimeoutException {
-        return load(urls, repeatMode, REQUEST_TIMEOUT);
-    }
-
-    default MediaStatus load(final List<String> urls, final RepeatMode repeatMode, final Duration timeout)
-            throws IOException, TimeoutException {
-        final List<Media> medias = new ArrayList<>();
-        for (final String url : urls) {
-            medias.add(Media.newInstance(url, Files.probeContentType(Paths.get(url)), StreamType.BUFFERED));
-        }
-        return load(medias, repeatMode, true, timeout);
-    }
-
-    default MediaStatus load(final String url) throws IOException, TimeoutException {
-        return load(url, REQUEST_TIMEOUT);
-    }
-
-    default MediaStatus load(final String url, final Duration timeout) throws IOException, TimeoutException {
-        return load(Arrays.asList(url), timeout);
-    }
 
     default MediaStatus mediaStatus() throws IOException, TimeoutException {
         return mediaStatus(REQUEST_TIMEOUT);

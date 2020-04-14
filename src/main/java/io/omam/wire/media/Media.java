@@ -30,10 +30,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire.media;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
-import io.omam.wire.media.Payloads.MediaData;
+import io.omam.wire.Payload;
 
 /**
  * Represents the media information.
@@ -44,8 +48,7 @@ import io.omam.wire.media.Payloads.MediaData;
  *      "https://developers.google.com/cast/docs/reference/receiver/cast.receiver.media.MediaInformation">Google
  *      Cast Reference: MediaInformation</a>
  */
-// FIXME make this a class with fromUrl, fromLiveUrl, a constructor. MediaController takes only List<Media>
-public interface Media {
+public final class Media extends Payload {
 
     /**
      * Media stream types.
@@ -54,24 +57,64 @@ public interface Media {
      *      Google Cast Reference: StreamType </a>
      */
     public enum StreamType {
-        /** buffered stream . */
+        /** Stored media streamed from an existing data store. */
         BUFFERED,
-        /** live stream. */
+        /** Live media generated on the fly. */
         LIVE,
-        /** none. */
+        /** None of the above. */
         NONE;
     }
 
+    /** {@link #contentId()}, never null. */
+    private final String contentId;
+
+    /** {@link #contentId()}, never null. */
+    private final String contentType;
+
+    /** {@link #duration()}, may be null. */
+    private final Double duration;
+
+    /** {@link #contentId()}, never null. */
+    private final StreamType streamType;
+
     /**
-     * Returns a new {@link Media}, that can be loaded into the device.
+     * Constructor.
      *
-     * @param contentId {@link Media#contentId()}
-     * @param contentType {@link Media#contentType()}
-     * @param streamType {@link Media#streamType()}
-     * @return a new {@link Media}
+     * @param aContentId content ID (URL), not null
+     * @param aContentType content MIME type, not null
+     * @param aStreamType stream type, not null
      */
-    static Media newInstance(final String contentId, final String contentType, final StreamType streamType) {
-        return new MediaData(contentId, contentType, streamType);
+    public Media(final String aContentId, final String aContentType, final StreamType aStreamType) {
+        contentId = Objects.requireNonNull(aContentId);
+        duration = null;
+        contentType = Objects.requireNonNull(aContentType);
+        streamType = Objects.requireNonNull(aStreamType);
+    }
+
+    /**
+     * Stored media streamed from an existing data store, {@link Files#probeContentType(java.nio.file.Path)
+     * probing} its content MIME.
+     *
+     * @param contentId content ID (URL) of the media, not null
+     * @return {@link Media} instance
+     * @throws IOException if an I/O error occurs
+     */
+    public static Media fromDataStream(final String contentId) throws IOException {
+        final String contentType = Files.probeContentType(Paths.get(contentId));
+        return new Media(contentId, contentType, StreamType.BUFFERED);
+    }
+
+    /**
+     * Live media generated on the fly, {@link Files#probeContentType(java.nio.file.Path) probing} its content
+     * MIME.
+     *
+     * @param contentId content ID (URL) of the media, not null
+     * @return {@link Media} instance
+     * @throws IOException if an I/O error occurs
+     */
+    public static Media fromLiveStream(final String contentId) throws IOException {
+        final String contentType = Files.probeContentType(Paths.get(contentId));
+        return new Media(contentId, contentType, StreamType.LIVE);
     }
 
     /**
@@ -79,27 +122,35 @@ public interface Media {
      *
      * @return the URL of the media
      */
-    String contentId();
+    public final String contentId() {
+        return contentId;
+    }
 
     /**
      * Returns the content MIME type.
      *
      * @return the content MIME type
      */
-    String contentType();
+    public final String contentType() {
+        return contentType;
+    }
 
     /**
      * Returns the media duration if known.
      *
      * @return the media duration if known
      */
-    Optional<Duration> duration();
+    public final Optional<Duration> duration() {
+        return duration == null ? Optional.empty() : Optional.of(Duration.ofMillis((long) (duration * 1000)));
+    }
 
     /**
      * Returns the media stream type.
      *
      * @return the media stream type.
      */
-    StreamType streamType();
+    public final StreamType streamType() {
+        return streamType;
+    }
 
 }
