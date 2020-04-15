@@ -168,6 +168,6 @@ nexus {
 }
 
 wrapper {
-    gradleVersion = '6.2'
+    gradleVersion = '6.3'
     distributionType = Wrapper.DistributionType.BIN
 }

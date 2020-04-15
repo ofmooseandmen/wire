@@ -64,7 +64,7 @@ import io.omam.wire.media.Payloads.Stop;
  * This application is available on all devices.
  */
 @SuppressWarnings("javadoc")
-// TODO: add items to queue see
+// TODO: add items to queue, setRepeat, setVolume, mute and umute see
 // https://github.com/vishen/go-chromecast/blob/master/application/application.go
 final class MediaControllerImpl extends StandardApplicationController implements MediaController {
 
