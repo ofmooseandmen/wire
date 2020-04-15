@@ -37,11 +37,19 @@ import java.util.concurrent.TimeoutException;
 
 import io.omam.wire.CastChannel.CastMessage;
 
-@SuppressWarnings("javadoc")
+/**
+ * Default {@link ApplicationWire} implementation.
+ */
 final class DefaultApplicationWire implements ApplicationWire {
 
+    /** communication channel. */
     private final CastV2Channel channel;
 
+    /**
+     * Constructor.
+     *
+     * @param aChannel communication channel
+     */
     DefaultApplicationWire(final CastV2Channel aChannel) {
         channel = aChannel;
     }

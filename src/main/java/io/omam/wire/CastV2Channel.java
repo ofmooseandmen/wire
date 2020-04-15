@@ -64,15 +64,25 @@ import io.omam.wire.CastChannel.CastMessage;
 /**
  * TCP Channel to communicate with a Cast device over the CAST V2 protocol.
  */
-@SuppressWarnings("javadoc")
 final class CastV2Channel implements AutoCloseable {
 
+    /**
+     * {@link ChannelListener} that notifies messages only for a given namespace.
+     */
     private static final class ByNamespaceListener implements ChannelListener {
 
+        /** namespace. */
         private final String ns;
 
+        /** decorated listener. */
         private final ChannelListener l;
 
+        /**
+         * Constructor.
+         *
+         * @param namespace namespace
+         * @param listener decorated listener
+         */
         ByNamespaceListener(final String namespace, final ChannelListener listener) {
             ns = namespace;
             l = listener;
@@ -90,6 +100,9 @@ final class CastV2Channel implements AutoCloseable {
             l.socketError();
         }
 
+        /**
+         * @return the decorated listener.
+         */
         final ChannelListener listener() {
             return l;
         }
@@ -234,6 +247,7 @@ final class CastV2Channel implements AutoCloseable {
      *
      * @param address device address
      * @param port device port
+     * @param sslContext secure socket protocol
      */
     private CastV2Channel(final InetAddress address, final int port, final SSLContext sslContext) {
         ias = new InetSocketAddress(address, port);
@@ -294,6 +308,11 @@ final class CastV2Channel implements AutoCloseable {
         closeSocket();
     }
 
+    /**
+     * Opens a connection to the device.
+     *
+     * @throws IOException in case of I/O error
+     */
     final synchronized void connect() throws IOException {
         if (socket == null) {
             LOGGER.fine(() -> "Connecting to " + ias);
@@ -356,7 +375,7 @@ final class CastV2Channel implements AutoCloseable {
      * This is hopefully a temporary workaround until server side authentication is implemented in the testing
      * framework.
      *
-     * @return
+     * @return the created socket
      * @throws IOException in case of I/O error
      */
     private Socket createSocket() throws IOException {

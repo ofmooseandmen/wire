@@ -39,9 +39,8 @@ import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.Payloads.AnyPayload;
 
 /**
- * Standard application controller, TODO
- * <p>
- * This class is intended to be extended to implement the application protocol.
+ * Standard application controller that assume request/reply correlation is implemented through the
+ * {@link Payload#requestId() payload request identifier}. *
  *
  * @see CastDeviceController#launchApp(String, java.util.function.BiFunction, java.time.Duration)
  * @see CastDeviceController#stopApp(ApplicationController, java.time.Duration)

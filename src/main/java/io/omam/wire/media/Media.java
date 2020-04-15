@@ -46,6 +46,7 @@ import java.util.Optional;
  *      "https://developers.google.com/cast/docs/reference/receiver/cast.receiver.media.MediaInformation">Google
  *      Cast Reference: MediaInformation</a>
  */
+// TODO, rename MediaInfo
 public final class Media {
 
     /**

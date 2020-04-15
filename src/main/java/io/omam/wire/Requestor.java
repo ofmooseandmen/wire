@@ -54,10 +54,22 @@ import io.omam.wire.Payloads.AnyPayload;
  */
 final class Requestor<T> implements ChannelListener {
 
-    @SuppressWarnings("javadoc")
+    /**
+     * {@code CastMessage} builder.
+     *
+     * @param <T> the type of the payload
+     */
     @FunctionalInterface
     private static interface CastMessageBuilder<T> {
 
+        /**
+         * Returns a new {@code CastMessage} using the given parameters.
+         *
+         * @param namespace the namespace of the message
+         * @param destination the destination of the message
+         * @param payload the payload of the message
+         * @return a new {@code CastMessage}
+         */
         CastMessage build(final String namespace, final String destination, final T payload);
 
     }
@@ -138,12 +150,22 @@ final class Requestor<T> implements ChannelListener {
         response = null;
     }
 
-    @SuppressWarnings("javadoc")
+    /**
+     * Returns a new Requestor to send request containing binary payloads.
+     *
+     * @param channel communication channel
+     * @return a new Requestor
+     */
     static Requestor<MessageLite> binaryPayload(final CastV2Channel channel) {
         return new Requestor<>(channel, BINARY_PAYLOAD, ALWAYS_CORRELATED);
     }
 
-    @SuppressWarnings("javadoc")
+    /**
+     * Returns a new Requestor to send request containing string payloads.
+     *
+     * @param channel communication channel
+     * @return a new Requestor
+     */
     static Requestor<Payload> stringPayload(final CastV2Channel channel) {
         return new Requestor<>(channel, STRING_PAYLOAD, STD_CORRELATOR);
     }

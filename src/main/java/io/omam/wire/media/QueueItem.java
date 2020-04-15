@@ -49,6 +49,13 @@ public interface QueueItem {
     boolean autoplay();
 
     /**
+     * Returns the unique identifier of the item in the queue.
+     *
+     * @return the unique identifier of the item in the queue
+     */
+    int itemId();
+
+    /**
      * Returns the media data of the playlist element.
      *
      * @return the media data of the playlist element

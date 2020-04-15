@@ -61,6 +61,29 @@ public interface MediaController extends ApplicationController {
         return new MediaControllerImpl(appDetails, wire);
     }
 
+    /**
+     * Adds the given medias to the end of the queue.
+     *
+     * @param medias list of medias to add
+     * @return the received response, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     */
+    default MediaStatus addToQueue(final List<Media> medias) throws IOException, TimeoutException {
+        return addToQueue(medias, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * Adds the given medias to the end of the queue.
+     *
+     * @param medias list of medias to add
+     * @param timeout response timeout
+     * @return the received response, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     */
+    MediaStatus addToQueue(final List<Media> medias, final Duration timeout) throws IOException, TimeoutException;
+
     default MediaStatus load(final List<Media> medias) throws IOException, TimeoutException {
         return load(medias, REQUEST_TIMEOUT);
     }
@@ -108,11 +131,67 @@ public interface MediaController extends ApplicationController {
 
     MediaStatus previous(final Duration timeout) throws IOException, TimeoutException;
 
+    default List<QueueItem> queue() throws IOException, TimeoutException {
+        return queue(REQUEST_TIMEOUT);
+    }
+
+    List<QueueItem> queue(final Duration timeout) throws IOException, TimeoutException;
+
+    /**
+     * Removes the queued items corresponding to the given identifiers. The identifiers can be obtain from the
+     * {@link QueueItem}s of a received {@link MediaStatus}.
+     *
+     * @param itemIds list of queue items identifiers to remove
+     * @param timeout response timeout
+     * @return the received response, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     */
+    default MediaStatus removeFromQueue(final List<Integer> itemIds) throws IOException, TimeoutException {
+        return removeFromQueue(itemIds, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * Removes the queued items corresponding to the given identifiers. The identifiers can be obtain from the
+     * {@link QueueItem}s of a received {@link MediaStatus}.
+     *
+     * @param itemIds list of queue items identifiers to remove
+     * @param timeout response timeout
+     * @return the received response, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     */
+    MediaStatus removeFromQueue(final List<Integer> itemIds, final Duration timeout)
+            throws IOException, TimeoutException;
+
     default MediaStatus seek(final Duration elapsed) throws IOException, TimeoutException {
         return seek(elapsed, REQUEST_TIMEOUT);
     }
 
     MediaStatus seek(final Duration elapsed, final Duration timeout) throws IOException, TimeoutException;
+
+    /**
+     * Sets the behaviour of the queue when all items have been played.
+     *
+     * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
+     * @return the received response, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the default timeout has elapsed before the response was received
+     */
+    default MediaStatus setRepeatMode(final RepeatMode mode) throws IOException, TimeoutException {
+        return setRepeatMode(mode, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * Sets the behaviour of the queue when all items have been played.
+     *
+     * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
+     * @param timeout response timeout
+     * @return the received response, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     */
+    MediaStatus setRepeatMode(final RepeatMode mode, final Duration timeout) throws IOException, TimeoutException;
 
     default MediaStatus stop() throws IOException, TimeoutException {
         return stop(REQUEST_TIMEOUT);

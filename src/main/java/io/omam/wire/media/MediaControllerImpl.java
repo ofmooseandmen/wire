@@ -48,7 +48,13 @@ import io.omam.wire.media.Payloads.MediaStatusResponse;
 import io.omam.wire.media.Payloads.Pause;
 import io.omam.wire.media.Payloads.Play;
 import io.omam.wire.media.Payloads.QueueData;
+import io.omam.wire.media.Payloads.QueueGetItems;
+import io.omam.wire.media.Payloads.QueueGetItemsIds;
+import io.omam.wire.media.Payloads.QueueInsert;
 import io.omam.wire.media.Payloads.QueueItemData;
+import io.omam.wire.media.Payloads.QueueItemIds;
+import io.omam.wire.media.Payloads.QueueItems;
+import io.omam.wire.media.Payloads.QueueRemove;
 import io.omam.wire.media.Payloads.QueueUpdate;
 import io.omam.wire.media.Payloads.Seek;
 import io.omam.wire.media.Payloads.Stop;
@@ -62,10 +68,11 @@ import io.omam.wire.media.Payloads.Stop;
  * streams if not supported.
  * <p>
  * This application is available on all devices.
+ *
+ * @see <a href="https://developers.google.com/cast/docs/reference/caf_receiver/cast.framework.messages">Google
+ *      Cast Framework Messages</a>
  */
 @SuppressWarnings("javadoc")
-// TODO: add items to queue, setRepeat, setVolume, mute and umute see
-// https://github.com/vishen/go-chromecast/blob/master/application/application.go
 final class MediaControllerImpl extends StandardApplicationController implements MediaController {
 
     /** media namespace. */
@@ -93,14 +100,21 @@ final class MediaControllerImpl extends StandardApplicationController implements
         mediaSessionId = -1;
     }
 
+    private static List<QueueItem> toItems(final List<Media> medias) {
+        return medias.stream().map(m -> new QueueItemData(true, m, 1, 0)).collect(Collectors.toList());
+    }
+
+    @Override
+    public final MediaStatus addToQueue(final List<Media> medias, final Duration timeout)
+            throws IOException, TimeoutException {
+        return request(new QueueInsert(mediaSessionId, toItems(medias)), timeout);
+    }
+
     @Override
     public final MediaStatus load(final List<Media> medias, final RepeatMode repeatMode, final boolean autoplay,
             final Duration timeout) throws IOException, TimeoutException {
-        final Media first = medias.get(0);
-        final List<QueueItem> items =
-                medias.stream().map(m -> new QueueItemData(autoplay, m, 1, 0)).collect(Collectors.toList());
-        final QueueData queue = new QueueData(items, repeatMode);
-        final Load load = new Load(details.sessionId(), first, autoplay, 0, queue);
+        final QueueData queue = new QueueData(toItems(medias), repeatMode);
+        final Load load = new Load(details.sessionId(), medias.get(0), autoplay, 0, queue);
         final MediaStatus resp = request(load, timeout);
         mediaSessionId = resp.mediaSessionId();
         return resp;
@@ -113,7 +127,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     @Override
     public final MediaStatus next(final Duration timeout) throws IOException, TimeoutException {
-        return request(new QueueUpdate(mediaSessionId, 1), timeout);
+        return request(QueueUpdate.jump(mediaSessionId, 1), timeout);
     }
 
     @Override
@@ -128,13 +142,39 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     @Override
     public final MediaStatus previous(final Duration timeout) throws IOException, TimeoutException {
-        return request(new QueueUpdate(mediaSessionId, -1), timeout);
+        return request(QueueUpdate.jump(mediaSessionId, -1), timeout);
+    }
+
+    @Override
+    public final List<QueueItem> queue(final Duration timeout) throws IOException, TimeoutException {
+        final String destination = details.transportId();
+        CastMessage resp = wire.request(NAMESPACE, destination, new QueueGetItemsIds(mediaSessionId), timeout);
+        final QueueItemIds queueItemIds =
+                wire.parse(resp, QueueItemIds.class).orElseThrow(() -> new IOException("invalid queue item ids"));
+        resp = wire
+            .request(NAMESPACE, destination, new QueueGetItems(mediaSessionId, queueItemIds.itemIds()), timeout);
+        return wire
+            .parse(resp, QueueItems.class)
+            .map(QueueItems::items)
+            .orElseThrow(() -> new IOException("invalid queue items"));
+    }
+
+    @Override
+    public final MediaStatus removeFromQueue(final List<Integer> itemIds, final Duration timeout)
+            throws IOException, TimeoutException {
+        return request(new QueueRemove(mediaSessionId, itemIds), timeout);
     }
 
     @Override
     public final MediaStatus seek(final Duration elapsed, final Duration timeout)
             throws IOException, TimeoutException {
         return request(new Seek(mediaSessionId, elapsed.getSeconds()), timeout);
+    }
+
+    @Override
+    public final MediaStatus setRepeatMode(final RepeatMode mode, final Duration timeout)
+            throws IOException, TimeoutException {
+        return request(QueueUpdate.repeatMode(mediaSessionId, mode), timeout);
     }
 
     @Override
@@ -151,13 +191,11 @@ final class MediaControllerImpl extends StandardApplicationController implements
             throws IOException, TimeoutException {
         final String destination = details.transportId();
         final CastMessage resp = wire.request(NAMESPACE, destination, payload, timeout);
-        // TODO: remove
-        System.err.println(resp.getPayloadUtf8());
         // TODO: check for possible errors: type":"INVALID_REQUEST","reason":"INVALID_MEDIA_SESSION_ID"
         final Optional<MediaStatusResponse> parsed = wire.parse(resp, MediaStatusResponse.class);
         return parsed
             .flatMap(MediaStatusResponse::status)
-            .orElseThrow(() -> new IOException("Received invalid media status"));
+            .orElseThrow(() -> new IOException("invalid media status"));
     }
 
 }

@@ -227,7 +227,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     /** listeners. */
     private final List<ConnectionListener> listeners;
 
-    @SuppressWarnings("javadoc")
+    /** set of application sessions. */
     private final Set<String> sessions;
 
     /**
@@ -370,7 +370,12 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         return state == State.OPENED;
     }
 
-    @SuppressWarnings("javadoc")
+    /**
+     * Joins an application session. Messages can be sent to device to control the application using an instance of
+     * {@link ApplicationController}.
+     *
+     * @param transpordId the application transport ID
+     */
     final void joinAppSession(final String transpordId) {
         synchronized (sessions) {
             if (!sessions.contains(transpordId)) {
@@ -380,7 +385,11 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         }
     }
 
-    @SuppressWarnings("javadoc")
+    /**
+     * Leaves an application session. Messages can no longer be sent to device to control the application.
+     *
+     * @param transpordId the application transport ID
+     */
     final void leaveAppSession(final String transpordId) {
         synchronized (sessions) {
             channel.send(Payloads.build(CONNECTION_NS, transpordId, Close.INSTANCE));

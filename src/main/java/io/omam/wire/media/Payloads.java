@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire.media;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -227,9 +228,42 @@ final class Payloads {
 
     }
 
+    static final class QueueGetItems extends MediaRequest {
+
+        @SuppressWarnings("unused")
+        private final List<Integer> itemIds;
+
+        QueueGetItems(final int aMediaSessionId, final List<Integer> someItemIds) {
+            super("QUEUE_GET_ITEMS", aMediaSessionId);
+            itemIds = someItemIds;
+        }
+    }
+
+    static final class QueueGetItemsIds extends MediaRequest {
+
+        QueueGetItemsIds(final int aMediaSessionId) {
+            super("QUEUE_GET_ITEM_IDS", aMediaSessionId);
+        }
+
+    }
+
+    static final class QueueInsert extends MediaRequest {
+
+        @SuppressWarnings("unused")
+        private final List<QueueItem> items;
+
+        QueueInsert(final int aMediaSessionId, final List<QueueItem> someItems) {
+            super("QUEUE_INSERT", aMediaSessionId);
+            items = someItems;
+        }
+
+    }
+
     static final class QueueItemData implements QueueItem {
 
         private final boolean autoplay;
+
+        private final Integer itemId;
 
         private final Media media;
 
@@ -240,6 +274,8 @@ final class Payloads {
         QueueItemData(final boolean isAutoplay, final Media aMedia, final double aPreloadTime,
                 final double aStartTime) {
             autoplay = isAutoplay;
+            /* itemId is assigned by the device. */
+            itemId = null;
             media = aMedia;
             preloadTime = aPreloadTime;
             startTime = aStartTime;
@@ -248,6 +284,11 @@ final class Payloads {
         @Override
         public final boolean autoplay() {
             return autoplay;
+        }
+
+        @Override
+        public final int itemId() {
+            return itemId;
         }
 
         @Override
@@ -266,14 +307,66 @@ final class Payloads {
         }
     }
 
+    static final class QueueItemIds extends Payload {
+
+        private final List<Integer> itemIds;
+
+        private QueueItemIds() {
+            itemIds = new ArrayList<>();
+        }
+
+        final List<Integer> itemIds() {
+            return itemIds;
+        }
+
+    }
+
+    static final class QueueItems extends Payload {
+
+        private final List<QueueItemData> items;
+
+        private QueueItems() {
+            items = new ArrayList<>();
+        }
+
+        final List<QueueItem> items() {
+            return Collections.unmodifiableList(items);
+        }
+
+    }
+
+    static final class QueueRemove extends MediaRequest {
+
+        @SuppressWarnings("unused")
+        private final List<Integer> itemIds;
+
+        QueueRemove(final int aMediaSessionId, final List<Integer> someItemIds) {
+            super("QUEUE_REMOVE", aMediaSessionId);
+            itemIds = someItemIds;
+        }
+
+    }
+
     static final class QueueUpdate extends MediaRequest {
 
         @SuppressWarnings("unused")
-        private final int jump;
+        private final Integer jump;
 
-        QueueUpdate(final int aMediaSessionId, final int aJump) {
+        @SuppressWarnings("unused")
+        private final RepeatMode repeatMode;
+
+        private QueueUpdate(final int aMediaSessionId, final Integer aJump, final RepeatMode aRepeatMode) {
             super("QUEUE_UPDATE", aMediaSessionId);
             jump = aJump;
+            repeatMode = aRepeatMode;
+        }
+
+        static QueueUpdate jump(final int mediaSessionId, final int jump) {
+            return new QueueUpdate(mediaSessionId, jump, null);
+        }
+
+        static QueueUpdate repeatMode(final int mediaSessionId, final RepeatMode repeatMode) {
+            return new QueueUpdate(mediaSessionId, null, repeatMode);
         }
 
     }

@@ -31,11 +31,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire;
 
 /**
- * Application controller.
- * <p>
- * TODO extends BaseApplicationController This class is intended to be implemen to implement the application
- * protocol.
+ * An application controller. Specific implementation of this interface implements the namespace/protocol to
+ * control the application.
  *
+ * @see StandardApplicationController
  * @see CastDeviceController#launchApp(String, java.util.function.BiFunction, java.time.Duration)
  * @see CastDeviceController#stopApp(ApplicationController, java.time.Duration)
  */

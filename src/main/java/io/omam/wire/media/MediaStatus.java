@@ -101,6 +101,9 @@ public interface MediaStatus {
     /**
      * Returns the list of media queue items.
      * <p>
+     * Note: the returned list contains the current item and may contain only a couple of next items (not
+     * necessarily all loaded items).
+     * <p>
      * The returned list is <strong>unmodifiable</strong>.
      *
      * @return the list of media queue items
