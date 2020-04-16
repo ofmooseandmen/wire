@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire;
 
 /**
- * A browser represents an active browsing operation for CAST devices.
+ * A browser represents an active browsing operation to discover Cast devices.
  */
 public interface CastDeviceBrowser extends AutoCloseable {
 

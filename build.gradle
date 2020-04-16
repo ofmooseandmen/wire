@@ -133,7 +133,7 @@ extraArchive {
 modifyPom {
     project {
         name 'wire'
-        description 'An implementation of the Google CASTV2 protocol in Java.'
+        description 'An implementation of the Google Cast V2 protocol in Java.'
         url 'https://github.com/ofmooseandmen/wire'
         inceptionYear '2018'
 

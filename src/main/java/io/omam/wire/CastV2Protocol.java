@@ -37,7 +37,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 /**
- * CASTV2 protocol constants.
+ * Cast V2 protocol constants.
  */
 public final class CastV2Protocol {
 
@@ -45,25 +45,25 @@ public final class CastV2Protocol {
     public static final Duration REQUEST_TIMEOUT;
 
     /** Google Cast registration type. */
-    static final String REGISTRATION_TYPE;
+    public static final String REGISTRATION_TYPE;
 
     /** friendly name attribute key. */
-    static final String FRIENDLY_NAME;
+    public static final String FRIENDLY_NAME;
 
     /** {@code true} if TLS protocol shall used to communicate with the device. */
-    static final boolean USE_TLS;
+    public static final boolean USE_TLS;
 
     /** sender id. */
-    static final String SENDER_ID;
+    public static final String SENDER_ID;
 
     /** default receiver id. */
-    static final String DEFAULT_RECEIVER_ID;
+    public static final String DEFAULT_RECEIVER_ID;
 
     /** PING message interval. */
-    static final Duration PING_INTERVAL;
+    public static final Duration PING_INTERVAL;
 
-    /** PONG message timeout: can miss three PONG messages. */
-    static final Duration PONG_TIMEOUT;
+    /** PONG message timeout: can miss <i>n</i> PONG messages. */
+    public static final Duration PONG_TIMEOUT;
 
     static {
         try (final InputStream is = CastV2Protocol.class.getClassLoader().getResourceAsStream("wire.properties")) {

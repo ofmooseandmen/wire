@@ -33,7 +33,7 @@ package io.omam.wire;
 import java.util.Optional;
 
 /**
- * Base class of all CAST V2 {@code PayloadType.STRING} payloads.
+ * Base class of all Cast V2 {@code PayloadType.STRING} payloads.
  * <p>
  * Depending on the message either {@link #type()} or {@link #responseType()} is present. Note that some response
  * contain {@link #type()} instead of {@link #responseType()}.

@@ -5,7 +5,7 @@
 [![codecov.io](https://codecov.io/github/ofmooseandmen/wire/branches/master/graphs/badge.svg)](https://codecov.io/github/ofmooseandmen/wire)
 [![license](https://img.shields.io/badge/license-BSD3-lightgray.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-An implementation of the Google CASTV2 protocol in Java.
+An implementation of the Google Cast V2 protocol in Java.
 
 ## Acknowledgement
 

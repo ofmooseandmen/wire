@@ -37,7 +37,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
 /**
- * {@link CastDeviceController} implementing the CAST V2 protocol.
+ * {@link CastDeviceController} implementing the Cast V2 protocol.
  */
 final class CastV2DeviceController implements CastDeviceController {
 

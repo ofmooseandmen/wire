@@ -62,12 +62,12 @@ public interface CastDeviceController extends AutoCloseable {
     }
 
     /**
-     * Returns a new controller implementing the CAST V2 protocol.
+     * Returns a new controller implementing the Cast V2 protocol.
      *
      * @param name Cast device name
      * @param address Cast device IP address
      * @param port Cast device port
-     * @return a new client implementing the CAST V2 protocol
+     * @return a new client implementing the Cast V2 protocol
      * @throws GeneralSecurityException in case of security error
      */
     static CastDeviceController v2(final String name, final InetAddress address, final int port)

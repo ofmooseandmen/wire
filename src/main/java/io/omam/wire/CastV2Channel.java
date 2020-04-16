@@ -62,7 +62,7 @@ import javax.net.ssl.X509TrustManager;
 import io.omam.wire.CastChannel.CastMessage;
 
 /**
- * TCP Channel to communicate with a Cast device over the CAST V2 protocol.
+ * TCP Channel to communicate with a Cast device over the Cast V2 protocol.
  */
 final class CastV2Channel implements AutoCloseable {
 
