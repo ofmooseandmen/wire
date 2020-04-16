@@ -155,8 +155,8 @@ public interface CastDeviceController extends AutoCloseable {
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the default timeout has elapsed before the status was received
      */
-    default CastDeviceStatus deviceStatus() throws IOException, TimeoutException {
-        return deviceStatus(REQUEST_TIMEOUT);
+    default CastDeviceStatus getDeviceStatus() throws IOException, TimeoutException {
+        return getDeviceStatus(REQUEST_TIMEOUT);
     }
 
     /**
@@ -167,7 +167,7 @@ public interface CastDeviceController extends AutoCloseable {
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
-    CastDeviceStatus deviceStatus(final Duration timeout) throws IOException, TimeoutException;
+    CastDeviceStatus getDeviceStatus(final Duration timeout) throws IOException, TimeoutException;
 
     /**
      * Determines whether the given application is available on the device.
@@ -227,7 +227,7 @@ public interface CastDeviceController extends AutoCloseable {
      * @throws TimeoutException if the default timeout has elapsed before the status was received
      */
     default <T extends ApplicationController> T launchApp(final String appId,
-            final BiFunction<Application, ApplicationWire, T> controllerSupplier)
+            final BiFunction<ApplicationData, ApplicationWire, T> controllerSupplier)
             throws IOException, TimeoutException {
         return launchApp(appId, controllerSupplier, REQUEST_TIMEOUT);
     }
@@ -250,7 +250,7 @@ public interface CastDeviceController extends AutoCloseable {
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
     <T extends ApplicationController> T launchApp(final String appId,
-            BiFunction<Application, ApplicationWire, T> controllerSupplier, final boolean joinAppSession,
+            BiFunction<ApplicationData, ApplicationWire, T> controllerSupplier, final boolean joinAppSession,
             final Duration timeout) throws IOException, TimeoutException;
 
     /**
@@ -266,7 +266,7 @@ public interface CastDeviceController extends AutoCloseable {
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
     default <T extends ApplicationController> T launchApp(final String appId,
-            final BiFunction<Application, ApplicationWire, T> controllerSupplier, final Duration timeout)
+            final BiFunction<ApplicationData, ApplicationWire, T> controllerSupplier, final Duration timeout)
             throws IOException, TimeoutException {
         return launchApp(appId, controllerSupplier, true, timeout);
     }

@@ -54,7 +54,7 @@ public final class ControllerSteps implements En {
     private static final class FakeAppController extends StandardApplicationController {
 
         @SuppressWarnings("unused")
-        FakeAppController(final Application someDetails, final ApplicationWire aWire) {
+        FakeAppController(final ApplicationData someDetails, final ApplicationWire aWire) {
             super(someDetails);
         }
 
@@ -162,7 +162,7 @@ public final class ControllerSteps implements En {
         When("the device is requested to be unmuted",
                 () -> status = exs.call(() -> rt().controller().unmuteDevice()));
 
-        When("the device status is requested", () -> status = exs.call(() -> rt().controller().deviceStatus()));
+        When("the device status is requested", () -> status = exs.call(() -> rt().controller().getDeviceStatus()));
 
         When("the device volume is requested to be set to {float}",
                 (final Float level) -> status = exs.call(() -> rt().controller().setDeviceVolume(level)));

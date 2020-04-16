@@ -115,7 +115,7 @@ public interface MediaStatus {
      *
      * @return the media information
      */
-    Optional<Media> media();
+    Optional<MediaInfo> media();
 
     /**
      * Returns the unique id for the session.

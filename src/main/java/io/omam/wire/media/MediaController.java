@@ -37,8 +37,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import io.omam.wire.Application;
 import io.omam.wire.ApplicationController;
+import io.omam.wire.ApplicationData;
 import io.omam.wire.ApplicationWire;
 
 /**
@@ -51,13 +51,12 @@ import io.omam.wire.ApplicationWire;
  * <p>
  * This application is available on all devices.
  */
-@SuppressWarnings("javadoc")
 public interface MediaController extends ApplicationController {
 
     /** the ID of the default media receiver application. */
     static final String APP_ID = "CC1AD845";
 
-    static MediaController newInstance(final Application appDetails, final ApplicationWire wire) {
+    static MediaController newInstance(final ApplicationData appDetails, final ApplicationWire wire) {
         return new MediaControllerImpl(appDetails, wire);
     }
 
@@ -69,7 +68,7 @@ public interface MediaController extends ApplicationController {
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
-    default MediaStatus addToQueue(final List<Media> medias) throws IOException, TimeoutException {
+    default MediaStatus addToQueue(final List<MediaInfo> medias) throws IOException, TimeoutException {
         return addToQueue(medias, REQUEST_TIMEOUT);
     }
 
@@ -82,30 +81,37 @@ public interface MediaController extends ApplicationController {
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
-    MediaStatus addToQueue(final List<Media> medias, final Duration timeout) throws IOException, TimeoutException;
+    MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
+            throws IOException, TimeoutException;
 
-    default MediaStatus load(final List<Media> medias) throws IOException, TimeoutException {
+    default MediaStatus getMediaStatus() throws IOException, TimeoutException {
+        return getMediaStatus(REQUEST_TIMEOUT);
+    }
+
+    MediaStatus getMediaStatus(final Duration timeout) throws IOException, TimeoutException;
+
+    default List<QueueItem> getQueueItems() throws IOException, TimeoutException {
+        return getQueueItems(REQUEST_TIMEOUT);
+    }
+
+    List<QueueItem> getQueueItems(final Duration timeout) throws IOException, TimeoutException;
+
+    default MediaStatus load(final List<MediaInfo> medias) throws IOException, TimeoutException {
         return load(medias, REQUEST_TIMEOUT);
     }
 
-    default MediaStatus load(final List<Media> medias, final Duration timeout)
+    default MediaStatus load(final List<MediaInfo> medias, final Duration timeout)
             throws IOException, TimeoutException {
         return load(medias, RepeatMode.REPEAT_OFF, true, timeout);
     }
 
-    default MediaStatus load(final List<Media> medias, final RepeatMode repeatMode, final boolean autoplay)
+    default MediaStatus load(final List<MediaInfo> medias, final RepeatMode repeatMode, final boolean autoplay)
             throws IOException, TimeoutException {
         return load(medias, repeatMode, autoplay, REQUEST_TIMEOUT);
     }
 
-    MediaStatus load(final List<Media> medias, final RepeatMode repeatMode, final boolean autoplay,
+    MediaStatus load(final List<MediaInfo> medias, final RepeatMode repeatMode, final boolean autoplay,
             final Duration timeout) throws IOException, TimeoutException;
-
-    default MediaStatus mediaStatus() throws IOException, TimeoutException {
-        return mediaStatus(REQUEST_TIMEOUT);
-    }
-
-    MediaStatus mediaStatus(final Duration timeout) throws IOException, TimeoutException;
 
     default MediaStatus next() throws IOException, TimeoutException {
         return next(REQUEST_TIMEOUT);
@@ -131,18 +137,11 @@ public interface MediaController extends ApplicationController {
 
     MediaStatus previous(final Duration timeout) throws IOException, TimeoutException;
 
-    default List<QueueItem> queue() throws IOException, TimeoutException {
-        return queue(REQUEST_TIMEOUT);
-    }
-
-    List<QueueItem> queue(final Duration timeout) throws IOException, TimeoutException;
-
     /**
      * Removes the queued items corresponding to the given identifiers. The identifiers can be obtain from the
      * {@link QueueItem}s of a received {@link MediaStatus}.
      *
      * @param itemIds list of queue items identifiers to remove
-     * @param timeout response timeout
      * @return the received response, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
@@ -173,7 +172,7 @@ public interface MediaController extends ApplicationController {
     /**
      * Sets the behaviour of the queue when all items have been played.
      *
-     * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
+     * @param mode the repeat mode
      * @return the received response, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
@@ -185,7 +184,7 @@ public interface MediaController extends ApplicationController {
     /**
      * Sets the behaviour of the queue when all items have been played.
      *
-     * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
+     * @param mode the repeat mode
      * @param timeout response timeout
      * @return the received response, never null
      * @throws IOException if the received response is an error or cannot be parsed

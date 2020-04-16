@@ -44,7 +44,7 @@ public interface CastDeviceStatus {
      *
      * @return all application(s) currently launched on the device
      */
-    List<Application> applications();
+    List<ApplicationData> applications();
 
     /**
      * Returns the {@link CastDeviceVolume volume} of the device.

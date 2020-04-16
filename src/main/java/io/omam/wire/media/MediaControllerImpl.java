@@ -37,7 +37,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import io.omam.wire.Application;
+import io.omam.wire.ApplicationData;
 import io.omam.wire.ApplicationWire;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.Payload;
@@ -79,7 +79,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     private static final String NAMESPACE = "urn:x-cast:com.google.cast.media";
 
     /** application details. */
-    private final Application details;
+    private final ApplicationData details;
 
     /** application wire. */
     private final ApplicationWire wire;
@@ -93,25 +93,25 @@ final class MediaControllerImpl extends StandardApplicationController implements
      * @param someDetails application details
      * @param aWire application wire
      */
-    public MediaControllerImpl(final Application someDetails, final ApplicationWire aWire) {
+    public MediaControllerImpl(final ApplicationData someDetails, final ApplicationWire aWire) {
         super(someDetails);
         details = someDetails;
         wire = aWire;
         mediaSessionId = -1;
     }
 
-    private static List<QueueItem> toItems(final List<Media> medias) {
+    private static List<QueueItem> toItems(final List<MediaInfo> medias) {
         return medias.stream().map(m -> new QueueItemData(true, m, 1, 0)).collect(Collectors.toList());
     }
 
     @Override
-    public final MediaStatus addToQueue(final List<Media> medias, final Duration timeout)
+    public final MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
             throws IOException, TimeoutException {
         return request(new QueueInsert(mediaSessionId, toItems(medias)), timeout);
     }
 
     @Override
-    public final MediaStatus load(final List<Media> medias, final RepeatMode repeatMode, final boolean autoplay,
+    public final MediaStatus load(final List<MediaInfo> medias, final RepeatMode repeatMode, final boolean autoplay,
             final Duration timeout) throws IOException, TimeoutException {
         final QueueData queue = new QueueData(toItems(medias), repeatMode);
         final Load load = new Load(details.sessionId(), medias.get(0), autoplay, 0, queue);
@@ -121,7 +121,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     }
 
     @Override
-    public final MediaStatus mediaStatus(final Duration timeout) throws IOException, TimeoutException {
+    public final MediaStatus getMediaStatus(final Duration timeout) throws IOException, TimeoutException {
         return request(GetStatus.INSTANCE, timeout);
     }
 
@@ -146,7 +146,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     }
 
     @Override
-    public final List<QueueItem> queue(final Duration timeout) throws IOException, TimeoutException {
+    public final List<QueueItem> getQueueItems(final Duration timeout) throws IOException, TimeoutException {
         final String destination = details.transportId();
         CastMessage resp = wire.request(NAMESPACE, destination, new QueueGetItemsIds(mediaSessionId), timeout);
         final QueueItemIds queueItemIds =

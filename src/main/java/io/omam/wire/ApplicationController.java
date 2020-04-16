@@ -45,6 +45,6 @@ public interface ApplicationController extends ChannelListener {
      *
      * @return the details of this application
      */
-    Application details();
+    ApplicationData details();
 
 }

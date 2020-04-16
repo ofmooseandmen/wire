@@ -68,7 +68,7 @@ if (Integer.valueOf(JavaVersion.current().getMajorVersion()) > 8) {
 compileJava.options.encoding = 'UTF-8'
 // See: https://docs.oracle.com/javase/9/tools/javac.htm#JSWOR627
 compileJava.options.compilerArgs += [
-    // '-Xlint:cast', // FIXME because of protobuf
+    '-Xlint:cast',
     '-Xlint:classfile',
     '-Xlint:deprecation',
     '-Xlint:dep-ann',

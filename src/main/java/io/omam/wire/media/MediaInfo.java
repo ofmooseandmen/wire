@@ -46,8 +46,7 @@ import java.util.Optional;
  *      "https://developers.google.com/cast/docs/reference/receiver/cast.receiver.media.MediaInformation">Google
  *      Cast Reference: MediaInformation</a>
  */
-// TODO, rename MediaInfo
-public final class Media {
+public final class MediaInfo {
 
     /**
      * Media stream types.
@@ -83,7 +82,7 @@ public final class Media {
      * @param aContentType content MIME type, not null
      * @param aStreamType stream type, not null
      */
-    public Media(final String aContentId, final String aContentType, final StreamType aStreamType) {
+    public MediaInfo(final String aContentId, final String aContentType, final StreamType aStreamType) {
         contentId = Objects.requireNonNull(aContentId);
         duration = null;
         contentType = Objects.requireNonNull(aContentType);
@@ -95,12 +94,12 @@ public final class Media {
      * probing} its content MIME.
      *
      * @param contentId content ID (URL) of the media, not null
-     * @return {@link Media} instance
+     * @return {@link MediaInfo} instance
      * @throws IOException if an I/O error occurs
      */
-    public static Media fromDataStream(final String contentId) throws IOException {
+    public static MediaInfo fromDataStream(final String contentId) throws IOException {
         final String contentType = Files.probeContentType(Paths.get(contentId));
-        return new Media(contentId, contentType, StreamType.BUFFERED);
+        return new MediaInfo(contentId, contentType, StreamType.BUFFERED);
     }
 
     /**
@@ -108,12 +107,12 @@ public final class Media {
      * MIME.
      *
      * @param contentId content ID (URL) of the media, not null
-     * @return {@link Media} instance
+     * @return {@link MediaInfo} instance
      * @throws IOException if an I/O error occurs
      */
-    public static Media fromLiveStream(final String contentId) throws IOException {
+    public static MediaInfo fromLiveStream(final String contentId) throws IOException {
         final String contentType = Files.probeContentType(Paths.get(contentId));
-        return new Media(contentId, contentType, StreamType.LIVE);
+        return new MediaInfo(contentId, contentType, StreamType.LIVE);
     }
 
     /**

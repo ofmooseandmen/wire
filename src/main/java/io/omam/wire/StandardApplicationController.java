@@ -54,19 +54,19 @@ public abstract class StandardApplicationController implements ApplicationContro
     };
 
     /** the details of this application. */
-    private final Application details;
+    private final ApplicationData details;
 
     /**
      * Constructor.
      *
      * @param someDetails the details of this application
      */
-    protected StandardApplicationController(final Application someDetails) {
+    protected StandardApplicationController(final ApplicationData someDetails) {
         details = someDetails;
     }
 
     @Override
-    public final Application details() {
+    public final ApplicationData details() {
         return details;
     }
 
@@ -86,7 +86,7 @@ public abstract class StandardApplicationController implements ApplicationContro
     /**
      * Invoked when a message from the application has been received.
      * <p>
-     * This method is invoked only with messages of the {@link Application#namespaces() application namespaces}
+     * This method is invoked only with messages of the {@link ApplicationData#namespaces() application namespaces}
      * which are not responses to requests.
      *
      * @param message application message

@@ -37,7 +37,7 @@ import java.util.Collection;
  *
  * @see CastDeviceController#launchApp(String, java.util.function.BiFunction, java.time.Duration)
  */
-public interface Application {
+public interface ApplicationData {
 
     /**
      * A namespace defines a communication channel and protocol.

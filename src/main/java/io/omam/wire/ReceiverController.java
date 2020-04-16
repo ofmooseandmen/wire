@@ -44,7 +44,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
-import io.omam.wire.Application.Namespace;
+import io.omam.wire.ApplicationData.Namespace;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.Payloads.AnyPayload;
 
@@ -109,7 +109,7 @@ final class ReceiverController implements ChannelListener {
     /**
      * Received applications.
      */
-    static final class ApplicationData implements Application {
+    static final class ApplicationDataImpl implements ApplicationData {
 
         /** {@link #id()}. */
         private final String appId;
@@ -147,7 +147,7 @@ final class ReceiverController implements ChannelListener {
          * @param aStatusText {@link #statusText()}
          * @param aTransportId {@link #transportId()}
          */
-        ApplicationData(final String anAppId, final String aDisplayName, final boolean idleScreen,
+        ApplicationDataImpl(final String anAppId, final String aDisplayName, final boolean idleScreen,
                 final boolean isLaunchedFromCloud, final Collection<NamespaceData> someNamespaces,
                 final String aSessionId, final String aStatusText, final String aTransportId) {
             appId = anAppId;
@@ -313,13 +313,13 @@ final class ReceiverController implements ChannelListener {
          * @param someApplications applications
          * @param aVolume volume
          */
-        ReceiverStatus(final List<ApplicationData> someApplications, final CastDeviceVolumeData aVolume) {
+        ReceiverStatus(final List<ApplicationDataImpl> someApplications, final CastDeviceVolumeData aVolume) {
             super("GET_STATUS", null);
             status = new ReceiverStatusData(someApplications, aVolume);
         }
 
         @Override
-        public final List<Application> applications() {
+        public final List<ApplicationData> applications() {
             return status.applications();
         }
 
@@ -434,7 +434,7 @@ final class ReceiverController implements ChannelListener {
     private static final class ReceiverStatusData {
 
         /** applications. */
-        private final List<ApplicationData> applications;
+        private final List<ApplicationDataImpl> applications;
 
         /** volume. */
         private final CastDeviceVolumeData volume;
@@ -445,7 +445,7 @@ final class ReceiverController implements ChannelListener {
          * @param someApplications applications
          * @param aVolume volume
          */
-        ReceiverStatusData(final List<ApplicationData> someApplications, final CastDeviceVolumeData aVolume) {
+        ReceiverStatusData(final List<ApplicationDataImpl> someApplications, final CastDeviceVolumeData aVolume) {
             applications = someApplications;
             volume = aVolume;
         }
@@ -453,7 +453,7 @@ final class ReceiverController implements ChannelListener {
         /**
          * @return applications
          */
-        final List<Application> applications() {
+        final List<ApplicationData> applications() {
             return applications == null ? Collections.emptyList() : Collections.unmodifiableList(applications);
         }
 

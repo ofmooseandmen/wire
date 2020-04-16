@@ -98,7 +98,7 @@ final class CastV2DeviceController implements CastDeviceController {
     }
 
     @Override
-    public final CastDeviceStatus deviceStatus(final Duration timeout) throws IOException, TimeoutException {
+    public final CastDeviceStatus getDeviceStatus(final Duration timeout) throws IOException, TimeoutException {
         ensureConnected();
         return receiver.receiverStatus(timeout);
     }
@@ -115,12 +115,12 @@ final class CastV2DeviceController implements CastDeviceController {
 
     @Override
     public final <T extends ApplicationController> T launchApp(final String appId,
-            final BiFunction<Application, ApplicationWire, T> controllerSupplier, final boolean joinAppSession,
+            final BiFunction<ApplicationData, ApplicationWire, T> controllerSupplier, final boolean joinAppSession,
             final Duration timeout) throws IOException, TimeoutException {
         ensureConnected();
         final CastDeviceStatus status = receiver.launch(appId, timeout);
-        final Collection<Application> apps = status.applications();
-        final Application app = apps
+        final Collection<ApplicationData> apps = status.applications();
+        final ApplicationData app = apps
             .stream()
             .filter(a -> a.id().equals(appId))
             .findFirst()

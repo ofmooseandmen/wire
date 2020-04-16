@@ -60,7 +60,7 @@ public interface QueueItem {
      *
      * @return the media data of the playlist element
      */
-    Media media();
+    MediaInfo media();
 
     /**
      * Returns the time relative to the beginning of this item playback at which the item shall be preloaded to

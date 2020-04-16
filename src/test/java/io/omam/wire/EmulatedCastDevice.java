@@ -78,7 +78,7 @@ import io.omam.wire.CastDeviceVolume.VolumeControlType;
 import io.omam.wire.Payloads.AnyPayload;
 import io.omam.wire.ReceiverController.AppAvailabilityReq;
 import io.omam.wire.ReceiverController.AppAvailabilityResp;
-import io.omam.wire.ReceiverController.ApplicationData;
+import io.omam.wire.ReceiverController.ApplicationDataImpl;
 import io.omam.wire.ReceiverController.CastDeviceVolumeData;
 import io.omam.wire.ReceiverController.Launch;
 import io.omam.wire.ReceiverController.ReceiverStatus;
@@ -245,10 +245,10 @@ final class EmulatedCastDevice implements AutoCloseable {
     private double level;
 
     /** list of launched applications. */
-    private final Collection<ApplicationData> launched;
+    private final Collection<ApplicationDataImpl> launched;
 
     /** list of available applications. */
-    private final Collection<ApplicationData> avail;
+    private final Collection<ApplicationDataImpl> avail;
 
     /**
      * Constructor.
@@ -403,7 +403,7 @@ final class EmulatedCastDevice implements AutoCloseable {
         if (appId.equals(MediaController.APP_ID)) {
             final String sessionId = UUID.randomUUID().toString();
             final String transportId = "transport-" + UUID.randomUUID().toString();
-            final ApplicationData app = new ApplicationData(appId, appId, false, false, Collections.emptyList(),
+            final ApplicationDataImpl app = new ApplicationDataImpl(appId, appId, false, false, Collections.emptyList(),
                                                             sessionId, "", transportId);
             launched.add(app);
             avail.add(app);
@@ -501,10 +501,10 @@ final class EmulatedCastDevice implements AutoCloseable {
      */
     private void handleStop(final CastMessage message) throws IOException {
         final String sessionId = parse(message, Stop.class).map(Stop::sessionId).orElseThrow(IOException::new);
-        final Optional<ApplicationData> optApp =
+        final Optional<ApplicationDataImpl> optApp =
                 launched.stream().filter(a -> a.sessionId().equals(sessionId)).findFirst();
         if (optApp.isPresent()) {
-            final ApplicationData app = optApp.get();
+            final ApplicationDataImpl app = optApp.get();
             launched.remove(app);
             respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
             send(build(RECEIVER_NS, message.getSourceId(), receiverStatus()));

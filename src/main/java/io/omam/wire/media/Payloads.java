@@ -72,7 +72,7 @@ final class Payloads {
         private final String sessionId;
 
         /** media. */
-        private final Media media;
+        private final MediaInfo media;
 
         /** true if media should be played when loaded. */
         private final boolean autoplay;
@@ -92,7 +92,7 @@ final class Payloads {
          * @param aCurrentTime current time
          * @param someQueueData queue data, null if no queue
          */
-        Load(final String aSessionId, final Media aMedia, final boolean isAutoplay, final double aCurrentTime,
+        Load(final String aSessionId, final MediaInfo aMedia, final boolean isAutoplay, final double aCurrentTime,
                 final QueueData someQueueData) {
             super("LOAD", null);
             sessionId = aSessionId;
@@ -111,7 +111,7 @@ final class Payloads {
 
         private List<QueueItemData> items;
 
-        private Media media;
+        private MediaInfo media;
 
         private int mediaSessionId;
 
@@ -143,7 +143,7 @@ final class Payloads {
         }
 
         @Override
-        public final Optional<Media> media() {
+        public final Optional<MediaInfo> media() {
             return Optional.ofNullable(media);
         }
 
@@ -265,13 +265,13 @@ final class Payloads {
 
         private final Integer itemId;
 
-        private final Media media;
+        private final MediaInfo media;
 
         private final double preloadTime;
 
         private final double startTime;
 
-        QueueItemData(final boolean isAutoplay, final Media aMedia, final double aPreloadTime,
+        QueueItemData(final boolean isAutoplay, final MediaInfo aMedia, final double aPreloadTime,
                 final double aStartTime) {
             autoplay = isAutoplay;
             /* itemId is assigned by the device. */
@@ -292,7 +292,7 @@ final class Payloads {
         }
 
         @Override
-        public final Media media() {
+        public final MediaInfo media() {
             return media;
         }
 
