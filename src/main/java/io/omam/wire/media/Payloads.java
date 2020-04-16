@@ -124,7 +124,7 @@ final class Payloads {
         private VolumeData volume;
 
         private MediaStatusData() {
-
+            /* empty, initialised by GSON. */
         }
 
         @Override

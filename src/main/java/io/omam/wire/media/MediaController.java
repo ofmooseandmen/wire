@@ -56,6 +56,13 @@ public interface MediaController extends ApplicationController {
     /** the ID of the default media receiver application. */
     static final String APP_ID = "CC1AD845";
 
+    /**
+     * Returns a new instance of {@code MediaController}.
+     * 
+     * @param appDetails the default media receiver application details
+     * @param wire API to communicate with the Cast device
+     * @return a new instance of {@code MediaController}
+     */
     static MediaController newInstance(final ApplicationData appDetails, final ApplicationWire wire) {
         return new MediaControllerImpl(appDetails, wire);
     }

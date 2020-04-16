@@ -37,9 +37,19 @@ import java.util.concurrent.TimeoutException;
 
 import io.omam.wire.CastChannel.CastMessage;
 
-@SuppressWarnings("javadoc")
+/**
+ * An API provided to {@link ApplicationController application controller}s to communicate with the Cast device.
+ */
 public interface ApplicationWire {
 
+    /**
+     * Obtains an instance of {@code T} from the payload of the given message.
+     *
+     * @param <T> the type of the desired object
+     * @param message message
+     * @param clazz the class of {@code T}
+     * @return the parsed status, empty if given message could not be parsed
+     */
     <T extends Payload> Optional<T> parse(final CastMessage message, final Class<T> clazz);
 
     /**
@@ -47,13 +57,13 @@ public interface ApplicationWire {
      * <p>
      * This method assumes that both the request and response JSON payload contain a {@code requestId} attribute.
      *
-     * @param namespace
-     * @param destination
-     * @param payload
-     * @param <T>
+     * @param namespace request namespace
+     * @param destination request destination
+     * @param payload request payload
+     * @param <T> the type of the payload
      * @param timeout response timeout
      * @return received response
-     * @throws IOException
+     * @throws IOException in case of I/O error
      * @throws TimeoutException if the timeout elapsed before the response was received
      */
     <T extends Payload> CastMessage request(final String namespace, final String destination, final T payload,
@@ -62,10 +72,10 @@ public interface ApplicationWire {
     /**
      * Sends a message (i.e. not expecting a response) to the application.
      *
-     * @param namespace
-     * @param destination
-     * @param payload
-     * @param <T>
+     * @param namespace request namespace
+     * @param destination request destination
+     * @param payload request payload
+     * @param <T> the type of the payload
      */
     <T extends Payload> void send(final String namespace, final String destination, final T payload);
 

@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -70,21 +71,12 @@ import com.google.protobuf.ByteString;
 import io.omam.halo.Attributes;
 import io.omam.halo.Service;
 import io.omam.wire.AppAvailabilities.AppAvailability;
+import io.omam.wire.ApplicationData.Namespace;
 import io.omam.wire.CastChannel.AuthError;
 import io.omam.wire.CastChannel.AuthError.ErrorType;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.CastChannel.DeviceAuthMessage;
-import io.omam.wire.CastDeviceVolume.VolumeControlType;
 import io.omam.wire.Payloads.AnyPayload;
-import io.omam.wire.ReceiverController.AppAvailabilityReq;
-import io.omam.wire.ReceiverController.AppAvailabilityResp;
-import io.omam.wire.ReceiverController.ApplicationDataImpl;
-import io.omam.wire.ReceiverController.CastDeviceVolumeData;
-import io.omam.wire.ReceiverController.Launch;
-import io.omam.wire.ReceiverController.ReceiverStatus;
-import io.omam.wire.ReceiverController.SetVolumeLevel;
-import io.omam.wire.ReceiverController.SetVolumeMuted;
-import io.omam.wire.ReceiverController.Stop;
 import io.omam.wire.media.MediaController;
 
 /**
@@ -92,6 +84,87 @@ import io.omam.wire.media.MediaController;
  * (audio) running 1.30 firmware.
  */
 final class EmulatedCastDevice implements AutoCloseable {
+
+    /**
+     * Application(s) availability request payload.
+     */
+    private static final class AppAvailabilityReq extends Payload {
+
+        /** ID of each application. */
+        private Collection<String> appId;
+
+        /**
+         * @return ID of each application
+         */
+        final Collection<String> appId() {
+            return appId;
+        }
+
+    }
+
+    /**
+     * Application(s) availability response payload.
+     */
+    private static final class AppAvailabilityResp extends Payload {
+
+        /** application availability indexed by application ID. */
+        @SuppressWarnings("unused")
+        private final Map<String, AppAvailability> availability;
+
+        /**
+         * Constructor.
+         *
+         * @param someAvailability application availability indexed by application ID
+         */
+        AppAvailabilityResp(final Map<String, AppAvailability> someAvailability) {
+            super(null, "GET_APP_AVAILABILITY");
+            availability = someAvailability;
+        }
+
+    }
+
+    /**
+     * Received applications.
+     */
+    @SuppressWarnings("unused")
+    private static final class AppData {
+
+        private final String appId;
+
+        private final String displayName;
+
+        private final boolean isIdleScreen;
+
+        private final boolean launchedFromCloud;
+
+        private final Collection<NamespaceData> namespaces;
+
+        private final String sessionId;
+
+        private final String statusText;
+
+        private final String transportId;
+
+        AppData(final String anAppId, final String aSessionId, final String aTransportId) {
+            appId = anAppId;
+            displayName = anAppId;
+            isIdleScreen = false;
+            launchedFromCloud = false;
+            namespaces = Collections.emptyList();
+            sessionId = aSessionId;
+            statusText = "";
+            transportId = aTransportId;
+        }
+
+        final String id() {
+            return appId;
+        }
+
+        final String sessionId() {
+            return sessionId;
+        }
+
+    }
 
     /**
      * Invalid Request message payload.
@@ -136,6 +209,23 @@ final class EmulatedCastDevice implements AutoCloseable {
     }
 
     /**
+     * Launch application request payload.
+     */
+    private static final class Launch extends Payload {
+
+        /** application ID. */
+        private String appId;
+
+        /**
+         * @return application ID.
+         */
+        final String appId() {
+            return appId;
+        }
+
+    }
+
+    /**
      * Launch Error message payload.
      */
     private static final class LaunchError extends Payload {
@@ -152,6 +242,21 @@ final class EmulatedCastDevice implements AutoCloseable {
     }
 
     /**
+     * Namespace.
+     */
+    private static final class NamespaceData implements Namespace {
+
+        /** {@link #name()}. */
+        private String name;
+
+        @Override
+        public final String name() {
+            return name;
+        }
+
+    }
+
+    /**
      * Pong message payload.
      */
     private static final class Pong extends Payload {
@@ -165,6 +270,124 @@ final class EmulatedCastDevice implements AutoCloseable {
         private Pong() {
             super("PONG", null);
         }
+    }
+
+    /**
+     * Cast device status response payload.
+     */
+    private static final class ReceiverStatus extends Payload {
+
+        @SuppressWarnings("unused")
+        private final ReceiverStatusData status;
+
+        ReceiverStatus(final List<AppData> apps, final VolumeData volume) {
+            super("GET_STATUS", null);
+            status = new ReceiverStatusData(apps, volume);
+        }
+
+    }
+
+    /**
+     * Receiver status data.
+     */
+    private static final class ReceiverStatusData {
+
+        /** applications. */
+        @SuppressWarnings("unused")
+        private final List<AppData> applications;
+
+        /** volume. */
+        @SuppressWarnings("unused")
+        private final VolumeData volume;
+
+        ReceiverStatusData(final List<AppData> someApplications, final VolumeData aVolume) {
+            applications = someApplications;
+            volume = aVolume;
+        }
+    }
+
+    /**
+     * Set volume level request payload.
+     */
+    private static final class SetVolumeLevel extends Payload {
+
+        /** volume level. */
+        private VolumeLevel volume;
+
+        /**
+         * @return volume level.
+         */
+        final double level() {
+            return volume.level;
+        }
+    }
+
+    /**
+     * Set volume muted request payload.
+     */
+    private static final class SetVolumeMuted extends Payload {
+
+        /** volume muted?. */
+        private VolumedMuted volume;
+
+        /**
+         * @return volume muted?.
+         */
+        final boolean isMuted() {
+            return volume.muted;
+        }
+
+    }
+
+    /**
+     * Stop application request payload.
+     */
+    private static final class Stop extends Payload {
+
+        /** application session ID. */
+        private String sessionId;
+
+        /**
+         * @return application session ID.
+         */
+        final String sessionId() {
+            return sessionId;
+        }
+    }
+
+    private static final class VolumeData {
+
+        @SuppressWarnings("unused")
+        private final double level;
+
+        @SuppressWarnings("unused")
+        private final boolean muted;
+
+        VolumeData(final double aLevel, final boolean isMuted) {
+            level = aLevel;
+            muted = isMuted;
+        }
+
+    }
+
+    /**
+     * Toggle volume mute on/off.
+     */
+    private static final class VolumedMuted {
+
+        /** volume muted?. */
+        boolean muted;
+
+    }
+
+    /**
+     * Volume level.
+     */
+    private static final class VolumeLevel {
+
+        /** volume level. */
+        double level;
+
     }
 
     /** logger. */
@@ -245,10 +468,10 @@ final class EmulatedCastDevice implements AutoCloseable {
     private double level;
 
     /** list of launched applications. */
-    private final Collection<ApplicationDataImpl> launched;
+    private final Collection<AppData> launched;
 
     /** list of available applications. */
-    private final Collection<ApplicationDataImpl> avail;
+    private final Collection<AppData> avail;
 
     /**
      * Constructor.
@@ -403,8 +626,7 @@ final class EmulatedCastDevice implements AutoCloseable {
         if (appId.equals(MediaController.APP_ID)) {
             final String sessionId = UUID.randomUUID().toString();
             final String transportId = "transport-" + UUID.randomUUID().toString();
-            final ApplicationDataImpl app = new ApplicationDataImpl(appId, appId, false, false, Collections.emptyList(),
-                                                            sessionId, "", transportId);
+            final AppData app = new AppData(appId, sessionId, transportId);
             launched.add(app);
             avail.add(app);
             respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
@@ -501,10 +723,10 @@ final class EmulatedCastDevice implements AutoCloseable {
      */
     private void handleStop(final CastMessage message) throws IOException {
         final String sessionId = parse(message, Stop.class).map(Stop::sessionId).orElseThrow(IOException::new);
-        final Optional<ApplicationDataImpl> optApp =
+        final Optional<AppData> optApp =
                 launched.stream().filter(a -> a.sessionId().equals(sessionId)).findFirst();
         if (optApp.isPresent()) {
-            final ApplicationDataImpl app = optApp.get();
+            final AppData app = optApp.get();
             launched.remove(app);
             respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
             send(build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
@@ -517,8 +739,7 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @return a receiver status build with the current status.
      */
     private ReceiverStatus receiverStatus() {
-        return new ReceiverStatus(new ArrayList<>(launched),
-                                  new CastDeviceVolumeData(VolumeControlType.MASTER, level, muted, 0.1));
+        return new ReceiverStatus(new ArrayList<>(launched), new VolumeData(level, muted));
     }
 
     /**

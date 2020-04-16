@@ -57,9 +57,10 @@ final class ReceiverController implements ChannelListener {
     /**
      * Application(s) availability request payload.
      */
-    static final class AppAvailabilityReq extends Payload {
+    private static final class AppAvailabilityReq extends Payload {
 
         /** ID of each application. */
+        @SuppressWarnings("unused")
         private final Collection<String> appId;
 
         /**
@@ -72,31 +73,21 @@ final class ReceiverController implements ChannelListener {
             appId = someAppId;
         }
 
-        /**
-         * @return the ID of each application.
-         */
-        final Collection<String> appId() {
-            return appId;
-        }
-
     }
 
     /**
      * Application(s) availability response payload.
      */
-    static final class AppAvailabilityResp extends Payload implements AppAvailabilities {
+    private static final class AppAvailabilityResp extends Payload implements AppAvailabilities {
 
         /** application availability indexed by application ID. */
-        private final Map<String, AppAvailability> availability;
+        private Map<String, AppAvailability> availability;
 
         /**
          * Constructor.
-         *
-         * @param someAvailability application availability indexed by application ID
          */
-        AppAvailabilityResp(final Map<String, AppAvailability> someAvailability) {
-            super(null, "GET_APP_AVAILABILITY");
-            availability = someAvailability;
+        private AppAvailabilityResp() {
+            /* empty, initialised by GSON. */
         }
 
         @Override
@@ -109,55 +100,37 @@ final class ReceiverController implements ChannelListener {
     /**
      * Received applications.
      */
-    static final class ApplicationDataImpl implements ApplicationData {
+    private static final class ApplicationDataImpl implements ApplicationData {
 
         /** {@link #id()}. */
-        private final String appId;
+        private String appId;
 
         /** {@link #name()}. */
-        private final String displayName;
+        private String displayName;
 
         /** {@link #isIdleScreen()}. */
-        private final boolean isIdleScreen;
+        private boolean isIdleScreen;
 
         /** {@link #launchedFromCloud()}. */
-        private final boolean launchedFromCloud;
+        private boolean launchedFromCloud;
 
         /** {@link #namespaces()}. */
-        private final Collection<NamespaceData> namespaces;
+        private Collection<NamespaceData> namespaces;
 
         /** {@link #sessionId()}. */
-        private final String sessionId;
+        private String sessionId;
 
         /** {@link #statusText()}. */
-        private final String statusText;
+        private String statusText;
 
         /** {@link #transportId()}. */
-        private final String transportId;
+        private String transportId;
 
         /**
          * Constructor.
-         *
-         * @param anAppId {@link #id()}
-         * @param aDisplayName {@link #name()}
-         * @param idleScreen {@link #isIdleScreen()}
-         * @param isLaunchedFromCloud {@link #launchedFromCloud()}
-         * @param someNamespaces {@link #namespaces()}
-         * @param aSessionId {@link #sessionId()}
-         * @param aStatusText {@link #statusText()}
-         * @param aTransportId {@link #transportId()}
          */
-        ApplicationDataImpl(final String anAppId, final String aDisplayName, final boolean idleScreen,
-                final boolean isLaunchedFromCloud, final Collection<NamespaceData> someNamespaces,
-                final String aSessionId, final String aStatusText, final String aTransportId) {
-            appId = anAppId;
-            displayName = aDisplayName;
-            isIdleScreen = idleScreen;
-            launchedFromCloud = isLaunchedFromCloud;
-            namespaces = someNamespaces;
-            sessionId = aSessionId;
-            statusText = aStatusText;
-            transportId = aTransportId;
+        private ApplicationDataImpl() {
+            /* empty, initialised by GSON. */
         }
 
         @Override
@@ -205,34 +178,25 @@ final class ReceiverController implements ChannelListener {
     /**
      * Received device volume.
      */
-    static final class CastDeviceVolumeData implements CastDeviceVolume {
+    private static final class CastDeviceVolumeData implements CastDeviceVolume {
 
         /** {@link #controlType()}. */
-        private final VolumeControlType controlType;
+        private VolumeControlType controlType;
 
         /** {@link #level()}. */
-        private final double level;
+        private double level;
 
         /** {@link #isMuted()}. */
-        private final boolean muted;
+        private boolean muted;
 
         /** {@link #stepInterval()}. */
-        private final double stepInterval;
+        private double stepInterval;
 
         /**
          * Constructor.
-         *
-         * @param aControlType control type
-         * @param aLevel level
-         * @param isMuted muted?
-         * @param aStepInterval volume step interval
          */
-        CastDeviceVolumeData(final VolumeControlType aControlType, final double aLevel, final boolean isMuted,
-                final double aStepInterval) {
-            controlType = aControlType;
-            level = aLevel;
-            muted = isMuted;
-            stepInterval = aStepInterval;
+        private CastDeviceVolumeData() {
+            /* empty, initialised by GSON. */
         }
 
         @Override
@@ -258,160 +222,6 @@ final class ReceiverController implements ChannelListener {
     }
 
     /**
-     * Launch application request payload.
-     */
-    static final class Launch extends Payload {
-
-        /** application ID. */
-        private final String appId;
-
-        /**
-         * Constructor.
-         *
-         * @param anAppId application ID
-         */
-        Launch(final String anAppId) {
-            super("LAUNCH", null);
-            appId = anAppId;
-        }
-
-        /**
-         * @return the application ID.
-         */
-        final String appId() {
-            return appId;
-        }
-
-    }
-
-    /**
-     * Namespace.
-     */
-    static final class NamespaceData implements Namespace {
-
-        /** {@link #name()}. */
-        private String name;
-
-        @Override
-        public final String name() {
-            return name;
-        }
-
-    }
-
-    /**
-     * Cast device status response payload.
-     */
-    static final class ReceiverStatus extends Payload implements CastDeviceStatus {
-
-        /** status. */
-        private final ReceiverStatusData status;
-
-        /**
-         * Constructor.
-         *
-         * @param someApplications applications
-         * @param aVolume volume
-         */
-        ReceiverStatus(final List<ApplicationDataImpl> someApplications, final CastDeviceVolumeData aVolume) {
-            super("GET_STATUS", null);
-            status = new ReceiverStatusData(someApplications, aVolume);
-        }
-
-        @Override
-        public final List<ApplicationData> applications() {
-            return status.applications();
-        }
-
-        @Override
-        public final CastDeviceVolume volume() {
-            return status.volume();
-        }
-
-    }
-
-    /**
-     * Set volume level request payload.
-     */
-    static final class SetVolumeLevel extends Payload {
-
-        /** volume level. */
-        private final VolumeLevel volume;
-
-        /**
-         * Constructor.
-         *
-         * @param level volume level
-         */
-        SetVolumeLevel(final double level) {
-            super("SET_VOLUME", null);
-            volume = new VolumeLevel(level);
-        }
-
-        /**
-         * @return volume level
-         */
-        final double level() {
-            return volume.level();
-        }
-
-    }
-
-    /**
-     * Set volume muted request payload.
-     */
-    static final class SetVolumeMuted extends Payload {
-
-        /** volume muted?. */
-        private final VolumedMuted volume;
-
-        /**
-         * Constructor.
-         *
-         * @param isMuted volume muted?
-         */
-        SetVolumeMuted(final boolean isMuted) {
-            super("SET_VOLUME", null);
-            volume = new VolumedMuted(isMuted);
-        }
-
-        /**
-         * @return volume muted?.
-         */
-        final boolean isMuted() {
-            return volume.isMuted();
-        }
-
-    }
-
-    /**
-     * Stop application request payload.
-     */
-    static final class Stop extends Payload {
-
-        /** application session ID. */
-        private final String sessionId;
-
-        /**
-         * Constructor.
-         *
-         * @param aSessionId application session ID
-         */
-        Stop(final String aSessionId) {
-            super("STOP", null);
-            sessionId = aSessionId;
-        }
-
-        /**
-         * @return the application session ID.
-         */
-        final String sessionId() {
-            return sessionId;
-        }
-
-    }
-
-    /**
      * Get Status message payload.
      */
     private static final class GetStatus extends Payload {
@@ -429,25 +239,91 @@ final class ReceiverController implements ChannelListener {
     }
 
     /**
+     * Launch application request payload.
+     */
+    private static final class Launch extends Payload {
+
+        /** application ID. */
+        @SuppressWarnings("unused")
+        private final String appId;
+
+        /**
+         * Constructor.
+         *
+         * @param anAppId application ID
+         */
+        Launch(final String anAppId) {
+            super("LAUNCH", null);
+            appId = anAppId;
+        }
+
+    }
+
+    /**
+     * Namespace.
+     */
+    private static final class NamespaceData implements Namespace {
+
+        /** {@link #name()}. */
+        private String name;
+
+        /**
+         * Constructor.
+         */
+        private NamespaceData() {
+            /* empty, initialised by GSON. */
+        }
+
+        @Override
+        public final String name() {
+            return name;
+        }
+
+    }
+
+    /**
+     * Cast device status response payload.
+     */
+    private static final class ReceiverStatus extends Payload implements CastDeviceStatus {
+
+        /** status. */
+        private ReceiverStatusData status;
+
+        /**
+         * Constructor.
+         */
+        private ReceiverStatus() {
+            /* empty, initialised by GSON. */
+        }
+
+        @Override
+        public final List<ApplicationData> applications() {
+            return status.applications();
+        }
+
+        @Override
+        public final CastDeviceVolume volume() {
+            return status.volume();
+        }
+
+    }
+
+    /**
      * Receiver status data.
      */
     private static final class ReceiverStatusData {
 
         /** applications. */
-        private final List<ApplicationDataImpl> applications;
+        private List<ApplicationDataImpl> applications;
 
         /** volume. */
-        private final CastDeviceVolumeData volume;
+        private CastDeviceVolumeData volume;
 
         /**
          * Constructor.
-         *
-         * @param someApplications applications
-         * @param aVolume volume
          */
-        ReceiverStatusData(final List<ApplicationDataImpl> someApplications, final CastDeviceVolumeData aVolume) {
-            applications = someApplications;
-            volume = aVolume;
+        private ReceiverStatusData() {
+            /* empty, initialised by GSON. */
         }
 
         /**
@@ -467,11 +343,75 @@ final class ReceiverController implements ChannelListener {
     }
 
     /**
+     * Set volume level request payload.
+     */
+    private static final class SetVolumeLevel extends Payload {
+
+        /** volume level. */
+        @SuppressWarnings("unused")
+        private final VolumeLevel volume;
+
+        /**
+         * Constructor.
+         *
+         * @param level volume level
+         */
+        SetVolumeLevel(final double level) {
+            super("SET_VOLUME", null);
+            volume = new VolumeLevel(level);
+        }
+
+    }
+
+    /**
+     * Set volume muted request payload.
+     */
+    private static final class SetVolumeMuted extends Payload {
+
+        /** volume muted?. */
+        @SuppressWarnings("unused")
+        private final VolumedMuted volume;
+
+        /**
+         * Constructor.
+         *
+         * @param isMuted volume muted?
+         */
+        SetVolumeMuted(final boolean isMuted) {
+            super("SET_VOLUME", null);
+            volume = new VolumedMuted(isMuted);
+        }
+
+    }
+
+    /**
+     * Stop application request payload.
+     */
+    private static final class Stop extends Payload {
+
+        /** application session ID. */
+        @SuppressWarnings("unused")
+        private final String sessionId;
+
+        /**
+         * Constructor.
+         *
+         * @param aSessionId application session ID
+         */
+        Stop(final String aSessionId) {
+            super("STOP", null);
+            sessionId = aSessionId;
+        }
+
+    }
+
+    /**
      * Toggle volume mute on/off.
      */
     private static final class VolumedMuted {
 
         /** volume muted?. */
+        @SuppressWarnings("unused")
         private final boolean muted;
 
         /**
@@ -483,13 +423,6 @@ final class ReceiverController implements ChannelListener {
             muted = isMuted;
         }
 
-        /**
-         * @return volume muted?.
-         */
-        boolean isMuted() {
-            return muted;
-        }
-
     }
 
     /**
@@ -498,6 +431,7 @@ final class ReceiverController implements ChannelListener {
     private static final class VolumeLevel {
 
         /** volume level. */
+        @SuppressWarnings("unused")
         private final double level;
 
         /**
@@ -507,13 +441,6 @@ final class ReceiverController implements ChannelListener {
          */
         VolumeLevel(final double aLevel) {
             level = aLevel;
-        }
-
-        /**
-         * @return volume level
-         */
-        final double level() {
-            return level;
         }
 
     }
