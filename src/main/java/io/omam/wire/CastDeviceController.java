@@ -149,9 +149,9 @@ public interface CastDeviceController extends AutoCloseable {
     String deviceName();
 
     /**
-     * Requests and returns the status of the Cast device.
+     * Requests and returns the current status of the Cast device.
      *
-     * @return the status of the Cast device, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the default timeout has elapsed before the status was received
      */
@@ -163,7 +163,7 @@ public interface CastDeviceController extends AutoCloseable {
      * Request and returns the status of the Cast device.
      *
      * @param timeout response timeout
-     * @return the status of the Cast device, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException in case of I/O error (including if connection has not be opened)
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
@@ -274,7 +274,7 @@ public interface CastDeviceController extends AutoCloseable {
     /**
      * Mutes the device.
      *
-     * @return the received response, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
@@ -286,7 +286,7 @@ public interface CastDeviceController extends AutoCloseable {
      * Mutes the device.
      *
      * @param timeout response timeout
-     * @return the received response, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
@@ -303,7 +303,7 @@ public interface CastDeviceController extends AutoCloseable {
      * Sets the volume level of the device.
      *
      * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
-     * @return the received response, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
@@ -316,7 +316,7 @@ public interface CastDeviceController extends AutoCloseable {
      *
      * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
      * @param timeout response timeout
-     * @return the received response, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */
@@ -328,7 +328,7 @@ public interface CastDeviceController extends AutoCloseable {
      * Cast device.
      *
      * @param app application controller
-     * @return the status of the Cast device, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the status was received
      */
@@ -342,7 +342,7 @@ public interface CastDeviceController extends AutoCloseable {
      *
      * @param app application controller
      * @param timeout response timeout
-     * @return the status of the Cast device, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the status was received
      */
@@ -352,7 +352,7 @@ public interface CastDeviceController extends AutoCloseable {
     /**
      * Un-mutes the device.
      *
-     * @return the received response, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the default timeout has elapsed before the response was received
      */
@@ -364,7 +364,7 @@ public interface CastDeviceController extends AutoCloseable {
      * Un-mutes the device.
      *
      * @param timeout response timeout
-     * @return the received response, never null
+     * @return the current status of the Cast device, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
      */

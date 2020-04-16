@@ -374,13 +374,13 @@ final class Payloads {
     @SuppressWarnings("unused")
     static final class Seek extends MediaRequest {
 
-        private final double currentTime;
+        private final double relativeTime;
 
         private final String resumeState;
 
-        Seek(final int aMediaSessionId, final double aCurrentTime) {
+        Seek(final int aMediaSessionId, final double aRelativeTime) {
             super("SEEK", aMediaSessionId);
-            currentTime = aCurrentTime;
+            relativeTime = aRelativeTime;
             resumeState = "PLAYBACK_START";
         }
 
