@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.Clock;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -88,23 +89,22 @@ final class CastDeviceBrowserImpl implements CastDeviceBrowser {
         @Override
         public final void up(final Service service) {
             final InetAddress address = service.ipv4Address().orElseGet(() -> service.ipv6Address().orElse(null));
-            final String name = service
-                .attributes()
-                .value(FRIENDLY_NAME, StandardCharsets.UTF_8)
-                .orElseGet(service::instanceName);
+            final String instanceName = service.instanceName();
             if (address == null) {
                 LOGGER
                     .warning(() -> "Ignored Cast Device ["
-                        + service.instanceName()
+                        + instanceName
                         + "] as it does not report its IP address");
             } else {
                 final int port = service.port();
                 try {
-                    final CastDeviceController client = CastDeviceController.v2(name, address, port);
+                    final Optional<String> name =
+                            service.attributes().value(FRIENDLY_NAME, StandardCharsets.UTF_8);
+                    final CastDeviceController client = CastDeviceController.v2(instanceName, address, port, name);
                     clients.put(service.name().toLowerCase(), client);
                     l.up(client);
                 } catch (final GeneralSecurityException e) {
-                    LOGGER.log(Level.WARNING, e, () -> "Ignored Cast Device [" + service.instanceName() + "]");
+                    LOGGER.log(Level.WARNING, e, () -> "Ignored Cast Device [" + instanceName + "]");
                 }
             }
         }

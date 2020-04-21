@@ -293,6 +293,15 @@ final class CastV2Channel implements AutoCloseable {
     }
 
     /**
+     * Returns the device socket address.
+     *
+     * @return the device socket address
+     */
+    final InetSocketAddress address() {
+        return ias;
+    }
+
+    /**
      * Closes this channel by first sending the given message.
      *
      * @param msg the message to send before closing the channel

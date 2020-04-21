@@ -34,10 +34,12 @@ import static io.omam.wire.CastV2Protocol.REQUEST_TIMEOUT;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
@@ -64,16 +66,17 @@ public interface CastDeviceController extends AutoCloseable {
     /**
      * Returns a new controller implementing the Cast V2 protocol.
      *
-     * @param name Cast device name
+     * @param id unique Cast device identifier (usually the instance name of the mDNS named service)
      * @param address Cast device IP address
      * @param port Cast device port
+     * @param name the friendly name of the device is set by the owner
      * @return a new client implementing the Cast V2 protocol
      * @throws GeneralSecurityException in case of security error
      */
-    static CastDeviceController v2(final String name, final InetAddress address, final int port)
-            throws GeneralSecurityException {
+    static CastDeviceController v2(final String id, final InetAddress address, final int port,
+            final Optional<String> name) throws GeneralSecurityException {
         final CastV2Channel channel = CastV2Channel.create(address, port);
-        return new CastV2DeviceController(name, channel);
+        return new CastV2DeviceController(id, channel, name);
     }
 
     /**
@@ -140,13 +143,25 @@ public interface CastDeviceController extends AutoCloseable {
     void connect(final Duration timeout) throws IOException, TimeoutException;
 
     /**
-     * Returns the name of the Cast device.
-     * <p>
-     * This method returns the "friendly name" of the Cast device, when available.
+     * Returns the IP Socket Address (IP address + port number) of the Cast device.
      *
-     * @return the name of the Cast device
+     * @return the IP Socket Address of the Cast device
      */
-    String deviceName();
+    InetSocketAddress deviceAddress();
+
+    /**
+     * Returns the unique identifier Cast device; usually the instance name of the mDNS named service.
+     *
+     * @return the unique identifier of the Cast device
+     */
+    String deviceId();
+
+    /**
+     * Returns the friendly name of the Cast device if set by the owner.
+     * 
+     * @return the friendly name or empty
+     */
+    Optional<String> deviceName();
 
     /**
      * Requests and returns the current status of the Cast device.

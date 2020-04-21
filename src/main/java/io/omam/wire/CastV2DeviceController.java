@@ -31,8 +31,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
@@ -44,11 +46,14 @@ final class CastV2DeviceController implements CastDeviceController {
     /** message for exception. */
     private static final String CONNECTION_IS_NOT_OPENED = "Connection is not opened";
 
-    /** Cast device name. */
-    private final String name;
+    /** Cast device identifier. */
+    private final String id;
 
     /** communication channel. */
     private final CastV2Channel channel;
+
+    /** Cast device friendly name. */
+    private final Optional<String> name;
 
     /** connection controller. */
     private final ConnectionController connection;
@@ -59,12 +64,14 @@ final class CastV2DeviceController implements CastDeviceController {
     /**
      * Constructor.
      *
-     * @param aName Cast device name
+     * @param anId Cast device unique identifier
      * @param aChannel communication channel
+     * @param aName Cast device name
      */
-    CastV2DeviceController(final String aName, final CastV2Channel aChannel) {
-        name = aName;
+    CastV2DeviceController(final String anId, final CastV2Channel aChannel, final Optional<String> aName) {
+        id = anId;
         channel = aChannel;
+        name = aName;
         connection = new ConnectionController(channel);
         receiver = new ReceiverController(channel);
     }
@@ -93,7 +100,17 @@ final class CastV2DeviceController implements CastDeviceController {
     }
 
     @Override
-    public final String deviceName() {
+    public final InetSocketAddress deviceAddress() {
+        return channel.address();
+    }
+
+    @Override
+    public final String deviceId() {
+        return id;
+    }
+
+    @Override
+    public final Optional<String> deviceName() {
         return name;
     }
 
