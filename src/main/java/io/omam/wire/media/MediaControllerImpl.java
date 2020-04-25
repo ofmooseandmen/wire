@@ -44,6 +44,7 @@ import io.omam.wire.Payload;
 import io.omam.wire.StandardApplicationController;
 import io.omam.wire.media.Payloads.GetStatus;
 import io.omam.wire.media.Payloads.Load;
+import io.omam.wire.media.Payloads.MediaStatusData;
 import io.omam.wire.media.Payloads.MediaStatusResponse;
 import io.omam.wire.media.Payloads.Pause;
 import io.omam.wire.media.Payloads.Play;
@@ -126,14 +127,10 @@ final class MediaControllerImpl extends StandardApplicationController implements
     public final List<QueueItem> getQueueItems(final Duration timeout) throws IOException, TimeoutException {
         final String destination = details.transportId();
         CastMessage resp = wire.request(NAMESPACE, destination, new QueueGetItemsIds(mediaSessionId), timeout);
-        final QueueItemIds queueItemIds =
-                wire.parse(resp, QueueItemIds.class).orElseThrow(() -> new IOException("invalid queue item ids"));
+        final QueueItemIds queueItemIds = wire.parse(resp, QueueItemIds.TYPE, QueueItemIds.class);
         resp = wire
             .request(NAMESPACE, destination, new QueueGetItems(mediaSessionId, queueItemIds.itemIds()), timeout);
-        return wire
-            .parse(resp, QueueItems.class)
-            .map(QueueItems::items)
-            .orElseThrow(() -> new IOException("invalid queue items"));
+        return wire.parse(resp, QueueItems.TYPE, QueueItems.class).items();
     }
 
     @Override
@@ -207,11 +204,9 @@ final class MediaControllerImpl extends StandardApplicationController implements
             throws IOException, TimeoutException {
         final String destination = details.transportId();
         final CastMessage resp = wire.request(NAMESPACE, destination, payload, timeout);
-        // TODO: check for possible errors: type":"INVALID_REQUEST","reason":"INVALID_MEDIA_SESSION_ID"
-        final Optional<MediaStatusResponse> parsed = wire.parse(resp, MediaStatusResponse.class);
-        return parsed
-            .flatMap(MediaStatusResponse::status)
-            .orElseThrow(() -> new IOException("invalid media status"));
+        final Optional<MediaStatusData> status =
+                wire.parse(resp, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
+        return status.orElseThrow(() -> new IOException("Invalid media status"));
     }
 
 }

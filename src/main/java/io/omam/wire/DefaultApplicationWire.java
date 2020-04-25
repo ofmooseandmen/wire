@@ -32,7 +32,6 @@ package io.omam.wire;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import io.omam.wire.CastChannel.CastMessage;
@@ -55,8 +54,9 @@ final class DefaultApplicationWire implements ApplicationWire {
     }
 
     @Override
-    public final <T extends Payload> Optional<T> parse(final CastMessage message, final Class<T> clazz) {
-        return Payloads.parse(message, clazz);
+    public final <T extends Payload> T parse(final CastMessage message, final String type, final Class<T> clazz)
+            throws IOException {
+        return Payloads.parse(message, type, clazz);
     }
 
     @Override

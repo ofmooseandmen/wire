@@ -49,7 +49,7 @@ public abstract class StandardApplicationController implements ApplicationContro
 
     /** standard response predicate. */
     private static final Predicate<CastMessage> STD_RESP_PREDICATE = m -> {
-        final Optional<AnyPayload> rs = parse(m, AnyPayload.class);
+        final Optional<AnyPayload> rs = parse(m);
         return rs.isPresent() && !rs.get().requestId().isPresent();
     };
 

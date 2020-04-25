@@ -32,7 +32,6 @@ package io.omam.wire;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import io.omam.wire.CastChannel.CastMessage;
@@ -47,10 +46,13 @@ public interface ApplicationWire {
      *
      * @param <T> the type of the desired object
      * @param message message
+     * @param type expected payload type
      * @param clazz the class of {@code T}
-     * @return the parsed status, empty if given message could not be parsed
+     * @return the parsed {@code T}
+     * @throws IOException if the payload is not of the given type or the it cannot be parsed
      */
-    <T extends Payload> Optional<T> parse(final CastMessage message, final Class<T> clazz);
+    <T extends Payload> T parse(final CastMessage message, final String type, final Class<T> clazz)
+            throws IOException;
 
     /**
      * Sends the given request and await for a correlated response using the standard request ID mechanism.

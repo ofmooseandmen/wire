@@ -33,6 +33,8 @@ package io.omam.wire;
 import static io.omam.wire.CastV2Protocol.DEFAULT_RECEIVER_ID;
 import static io.omam.wire.CastV2Protocol.SENDER_ID;
 
+import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -136,26 +138,58 @@ final class Payloads {
     }
 
     /**
+     * Obtains an instance of {@code AnyPayload} from the payload of the given message.
+     *
+     * @param msg message
+     * @return the parsed {@code AnyPayload} or empty
+     */
+    static Optional<AnyPayload> parse(final CastMessage msg) {
+        Objects.requireNonNull(msg);
+        final String payload = msg.getPayloadUtf8();
+        if (payload == null || payload.isEmpty()) {
+            LOGGER.warning(() -> "Could not parse null or empty payload");
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(GSON.fromJson(payload, AnyPayload.class));
+        } catch (final JsonSyntaxException | ClassCastException | IllegalArgumentException e) {
+            LOGGER.log(Level.WARNING, e, () -> "Could not parse [" + payload + "]");
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Obtains an instance of {@code T} from the payload of the given message.
      *
      * @param <T> the type of the desired object
      * @param msg message
+     * @param type expected payload type
      * @param clazz the class of {@code T}
-     * @return the parsed status, empty if given message could not be parsed
+     * @return the parsed {@code T}
+     * @throws IOException if the payload is not of the given type or the it cannot be parsed
      */
-    static <T extends Payload> Optional<T> parse(final CastMessage msg, final Class<T> clazz) {
+    static <T extends Payload> T parse(final CastMessage msg, final String type, final Class<T> clazz)
+            throws IOException {
+        Objects.requireNonNull(msg);
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(clazz);
+
+        final String payload = msg.getPayloadUtf8();
+        if (payload == null || payload.isEmpty()) {
+            throw new IOException("Could not parse null or empty payload");
+        }
+
         try {
-            final String payload = msg.getPayloadUtf8();
-            if (payload == null || payload.isEmpty()) {
-                LOGGER.warning(() -> "Could not parse null or empty payload");
-                return Optional.empty();
+
+            final AnyPayload parsedType = GSON.fromJson(payload, AnyPayload.class);
+            final String actualType = parsedType.responseType().orElseGet(() -> parsedType.type().orElse(null));
+            if (!type.equals(actualType)) {
+                throw new IOException("Error: " + actualType + "; expected: " + type);
             }
-            return Optional.of(GSON.fromJson(payload, clazz));
+
+            return GSON.fromJson(payload, clazz);
         } catch (final JsonSyntaxException | ClassCastException | IllegalArgumentException e) {
-            LOGGER
-                .log(Level.WARNING, e,
-                        () -> "Could not parse [" + msg.getPayloadUtf8() + "] into an instance of Message");
-            return Optional.empty();
+            throw new IOException("Could not parse [" + payload + "]", e);
         }
     }
 

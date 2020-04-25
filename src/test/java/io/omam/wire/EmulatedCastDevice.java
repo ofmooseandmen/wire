@@ -76,7 +76,6 @@ import io.omam.wire.CastChannel.AuthError;
 import io.omam.wire.CastChannel.AuthError.ErrorType;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.CastChannel.DeviceAuthMessage;
-import io.omam.wire.Payloads.AnyPayload;
 import io.omam.wire.media.MediaController;
 
 /**
@@ -89,6 +88,8 @@ final class EmulatedCastDevice implements AutoCloseable {
      * Application(s) availability request payload.
      */
     private static final class AppAvailabilityReq extends Payload {
+
+        public static final String TYPE = "GET_APP_AVAILABILITY";
 
         /** ID of each application. */
         private Collection<String> appId;
@@ -213,6 +214,8 @@ final class EmulatedCastDevice implements AutoCloseable {
      */
     private static final class Launch extends Payload {
 
+        public static final String TYPE = "LAUNCH";
+
         /** application ID. */
         private String appId;
 
@@ -281,7 +284,7 @@ final class EmulatedCastDevice implements AutoCloseable {
         private final ReceiverStatusData status;
 
         ReceiverStatus(final List<AppData> apps, final VolumeData volume) {
-            super("GET_STATUS", null);
+            super("RECEIVER_STATUS", null);
             status = new ReceiverStatusData(apps, volume);
         }
 
@@ -311,6 +314,8 @@ final class EmulatedCastDevice implements AutoCloseable {
      */
     private static final class SetVolumeLevel extends Payload {
 
+        public static final String TYPE = "SET_VOLUME";
+
         /** volume level. */
         private VolumeLevel volume;
 
@@ -326,6 +331,8 @@ final class EmulatedCastDevice implements AutoCloseable {
      * Set volume muted request payload.
      */
     private static final class SetVolumeMuted extends Payload {
+
+        public static final String TYPE = "SET_VOLUME";
 
         /** volume muted?. */
         private VolumedMuted volume;
@@ -343,6 +350,8 @@ final class EmulatedCastDevice implements AutoCloseable {
      * Stop application request payload.
      */
     private static final class Stop extends Payload {
+
+        public static final String TYPE = "STOP";
 
         /** application session ID. */
         private String sessionId;
@@ -593,9 +602,7 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @throws IOException in case of I/O error
      */
     private void handleGetAppAvailability(final CastMessage message) throws IOException {
-        final Collection<String> ids = parse(message, AppAvailabilityReq.class)
-            .map(AppAvailabilityReq::appId)
-            .orElseThrow(IOException::new);
+        final Collection<String> ids = parse(message, AppAvailabilityReq.TYPE, AppAvailabilityReq.class).appId();
         final Map<String, AppAvailability> resp = new HashMap<>();
         for (final String id : ids) {
             final boolean isAvail = avail.stream().anyMatch(a -> a.id().equals(id));
@@ -621,7 +628,7 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @throws IOException in case of I/O error
      */
     private void handleLaunch(final CastMessage message) throws IOException {
-        final String appId = parse(message, Launch.class).map(Launch::appId).orElseThrow(IOException::new);
+        final String appId = parse(message, Launch.TYPE, Launch.class).appId();
         /* just support the default media app. */
         if (appId.equals(MediaController.APP_ID)) {
             final String sessionId = UUID.randomUUID().toString();
@@ -661,7 +668,7 @@ final class EmulatedCastDevice implements AutoCloseable {
                 } else if (isCloseConnection(message)) {
                     break;
                 } else {
-                    final String type = parse(message, AnyPayload.class)
+                    final String type = parse(message)
                         .map(m -> m.responseType().orElseGet(() -> m.type().orElse(null)))
                         .orElseThrow(IOException::new);
                     handlers.getOrDefault(type, t -> {
@@ -710,8 +717,8 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @throws IOException in case of I/O error
      */
     private void handleSetVolume(final CastMessage message) throws IOException {
-        muted = parse(message, SetVolumeMuted.class).map(SetVolumeMuted::isMuted).orElse(false);
-        level = parse(message, SetVolumeLevel.class).map(SetVolumeLevel::level).orElse(0.0);
+        muted = parse(message, SetVolumeMuted.TYPE, SetVolumeMuted.class).isMuted();
+        level = parse(message, SetVolumeLevel.TYPE, SetVolumeLevel.class).level();
         respond(message, build(RECEIVER_NS, message.getSourceId(), receiverStatus()));
     }
 
@@ -722,7 +729,7 @@ final class EmulatedCastDevice implements AutoCloseable {
      * @throws IOException in case of I/O error
      */
     private void handleStop(final CastMessage message) throws IOException {
-        final String sessionId = parse(message, Stop.class).map(Stop::sessionId).orElseThrow(IOException::new);
+        final String sessionId = parse(message, Stop.TYPE, Stop.class).sessionId();
         final Optional<AppData> optApp =
                 launched.stream().filter(a -> a.sessionId().equals(sessionId)).findFirst();
         if (optApp.isPresent()) {
@@ -753,8 +760,7 @@ final class EmulatedCastDevice implements AutoCloseable {
         final JsonElement elt = GSON.fromJson(response.getPayloadUtf8(), JsonElement.class);
         final JsonObject obj = elt.getAsJsonObject();
         obj.remove(REQUEST_ID);
-        final int reqId =
-                parse(request, AnyPayload.class).flatMap(Payload::requestId).orElseThrow(AssertionError::new);
+        final int reqId = parse(request).flatMap(Payload::requestId).orElseThrow(AssertionError::new);
         obj.addProperty(REQUEST_ID, reqId);
         send(CastMessage.newBuilder(response).clearPayloadUtf8().setPayloadUtf8(GSON.toJson(elt)).build());
     }

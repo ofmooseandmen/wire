@@ -71,7 +71,7 @@ public final class EmulatedCastDeviceSteps implements En {
                     .orElseThrow(() -> new AssertionError("Message " + expected + " was not received"));
                 assertEquals(msg.getNamespace(), expected.namespace());
                 if (!expected.type().equals("AUTH")) {
-                    final AnyPayload parsed = parse(msg, AnyPayload.class).orElseThrow(UNPARSABLE);
+                    final AnyPayload parsed = parse(msg).orElseThrow(UNPARSABLE);
                     assertEquals(parsed.type(), Optional.of(expected.type()));
                 }
             }

@@ -175,6 +175,8 @@ final class Payloads {
 
     static final class MediaStatusResponse extends Payload {
 
+        static final String TYPE = "MEDIA_STATUS";
+
         private List<MediaStatusData> status;
 
         private MediaStatusResponse() {
@@ -309,6 +311,8 @@ final class Payloads {
 
     static final class QueueItemIds extends Payload {
 
+        static final String TYPE = "QUEUE_ITEM_IDS";
+
         private final List<Integer> itemIds;
 
         private QueueItemIds() {
@@ -322,6 +326,8 @@ final class Payloads {
     }
 
     static final class QueueItems extends Payload {
+
+        static final String TYPE = "QUEUE_ITEMS";
 
         private final List<QueueItemData> items;
 

@@ -34,19 +34,17 @@ import static io.omam.wire.Payloads.parse;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import io.omam.wire.ApplicationData.Namespace;
 import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payloads.AnyPayload;
 
 /**
  * {@code ReceiverController} implements the {@code urn:x-cast:com.google.cast.receiver} namespace/protocol to
@@ -79,6 +77,9 @@ final class ReceiverController implements ChannelListener {
      * Application(s) availability response payload.
      */
     private static final class AppAvailabilityResp extends Payload implements AppAvailabilities {
+
+        /** payload type. */
+        static final String TYPE = "GET_APP_AVAILABILITY";
 
         /** application availability indexed by application ID. */
         private Map<String, AppAvailability> availability;
@@ -286,6 +287,9 @@ final class ReceiverController implements ChannelListener {
      */
     private static final class ReceiverStatus extends Payload implements CastDeviceStatus {
 
+        /** payload type. */
+        static final String TYPE = "RECEIVER_STATUS";
+
         /** status. */
         private ReceiverStatusData status;
 
@@ -445,9 +449,6 @@ final class ReceiverController implements ChannelListener {
 
     }
 
-    /** possible errors. */
-    private static final Collection<String> ERRORS = Arrays.asList("INVALID_REQUEST", "LAUNCH_ERROR");
-
     /** logger. */
     private static final Logger LOGGER = Logger.getLogger(ReceiverController.class.getName());
 
@@ -472,31 +473,40 @@ final class ReceiverController implements ChannelListener {
     }
 
     /**
-     * Parses the content of the given {@code resp} into a message of the given type.
+     * Determines if given message is an unsolicited receiver status message sent by the device.
      *
-     * @param <T> response type
-     * @param resp unparsed response
-     * @param clazz response class
-     * @return a new response of the given type
+     * @param message message
+     * @return {@true} if unsolicited receiver status message
+     */
+    private static boolean isUnsolicitedStatus(final CastMessage message) {
+        return parse(message)
+            .map(s -> s.type().isPresent()
+                && s.type().get().equals(ReceiverStatus.TYPE)
+                && !s.requestId().isPresent())
+            .orElse(false);
+    }
+
+    /**
+     * Obtains an instance of {@code ReceiverStatus} from the given payload.
+     *
+     * @param resp response
+     * @return a the parsed ReceiverStatus
      * @throws IOException if the response is an error
      */
-    private static <T extends Payload> T parseResponse(final CastMessage resp, final Class<T> clazz)
-            throws IOException {
-        final String type = parse(resp, AnyPayload.class)
-            .map(m -> m.responseType().orElseGet(() -> m.type().orElse(null)))
-            .orElseThrow(() -> new IOException("Could not parse received response type"));
-        if (ERRORS.contains(type)) {
-            throw new IOException(type);
-        }
-        return parse(resp, clazz).orElseThrow(() -> new IOException("Could not parse received response"));
+    private static ReceiverStatus parseReceiverStatus(final CastMessage resp) throws IOException {
+        return parse(resp, ReceiverStatus.TYPE, ReceiverStatus.class);
     }
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        final Optional<ReceiverStatus> rs = parse(message, ReceiverStatus.class);
-        if (rs.isPresent() && !rs.get().requestId().isPresent()) {
-            LOGGER.fine(() -> "Received new device status [" + rs.get() + "]");
-            listeners.forEach(l -> l.status(rs.get()));
+        if (isUnsolicitedStatus(message)) {
+            try {
+                final ReceiverStatus rs = parseReceiverStatus(message);
+                LOGGER.fine(() -> "Received new device status [" + rs + "]");
+                listeners.forEach(l -> l.status(rs));
+            } catch (final IOException e) {
+                LOGGER.log(Level.FINE, e, () -> "Could not parse received receiver status");
+            }
         }
     }
 
@@ -528,7 +538,7 @@ final class ReceiverController implements ChannelListener {
             throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, new AppAvailabilityReq(appIds), timeout);
-        return parseResponse(resp, AppAvailabilityResp.class);
+        return parse(resp, AppAvailabilityResp.TYPE, AppAvailabilityResp.class);
     }
 
     /**
@@ -543,7 +553,7 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus launch(final String appId, final Duration timeout)
             throws IOException, TimeoutException {
         final CastMessage resp = Requestor.stringPayload(channel).request(RECEIVER_NS, new Launch(appId), timeout);
-        return parseResponse(resp, ReceiverStatus.class);
+        return parseReceiverStatus(resp);
     }
 
     /**
@@ -557,7 +567,7 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus mute(final Duration timeout) throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, new SetVolumeMuted(true), timeout);
-        return parseResponse(resp, ReceiverStatus.class);
+        return parseReceiverStatus(resp);
     }
 
     /**
@@ -571,7 +581,7 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus receiverStatus(final Duration timeout) throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, GetStatus.INSTANCE, timeout);
-        return parseResponse(resp, ReceiverStatus.class);
+        return parseReceiverStatus(resp);
     }
 
     /**
@@ -596,7 +606,7 @@ final class ReceiverController implements ChannelListener {
             throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, new SetVolumeLevel(level), timeout);
-        return parseResponse(resp, ReceiverStatus.class);
+        return parseReceiverStatus(resp);
     }
 
     /**
@@ -613,7 +623,7 @@ final class ReceiverController implements ChannelListener {
             throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, new Stop(sessionId), timeout);
-        return parseResponse(resp, ReceiverStatus.class);
+        return parseReceiverStatus(resp);
     }
 
     /**
@@ -627,7 +637,7 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus unmute(final Duration timeout) throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, new SetVolumeMuted(false), timeout);
-        return parseResponse(resp, ReceiverStatus.class);
+        return parseReceiverStatus(resp);
     }
 
 }

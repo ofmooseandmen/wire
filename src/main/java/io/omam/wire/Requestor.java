@@ -79,8 +79,8 @@ final class Requestor<T> implements ChannelListener {
 
     /** standard request/response correlation predicate. */
     private static final BiPredicate<CastMessage, CastMessage> STD_CORRELATOR = (req, resp) -> {
-        final Optional<AnyPayload> pReq = parse(req, AnyPayload.class);
-        final Optional<AnyPayload> pResp = parse(resp, AnyPayload.class);
+        final Optional<AnyPayload> pReq = parse(req);
+        final Optional<AnyPayload> pResp = parse(resp);
         if (pReq.isPresent() && pResp.isPresent()) {
             return pReq.get().requestId().isPresent() && pReq.get().requestId().equals(pResp.get().requestId());
         }
