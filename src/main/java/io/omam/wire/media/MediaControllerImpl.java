@@ -33,8 +33,12 @@ package io.omam.wire.media;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import io.omam.wire.ApplicationData;
@@ -78,11 +82,17 @@ final class MediaControllerImpl extends StandardApplicationController implements
     /** media namespace. */
     private static final String NAMESPACE = "urn:x-cast:com.google.cast.media";
 
+    /** logger. */
+    private static final Logger LOGGER = Logger.getLogger(MediaControllerImpl.class.getName());
+
     /** application details. */
     private final ApplicationData details;
 
     /** application wire. */
     private final ApplicationWire wire;
+
+    /** listeners. */
+    private final ConcurrentLinkedQueue<MediaStatusListener> listeners;
 
     /** current media session ID or -1. */
     private int mediaSessionId;
@@ -97,6 +107,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
         super(someDetails);
         details = someDetails;
         wire = aWire;
+        listeners = new ConcurrentLinkedQueue<>();
         mediaSessionId = -1;
     }
 
@@ -110,6 +121,12 @@ final class MediaControllerImpl extends StandardApplicationController implements
      */
     private static List<QueueItem> toItems(final List<MediaInfo> medias) {
         return medias.stream().map(m -> new QueueItemData(true, m, 1, 0)).collect(Collectors.toList());
+    }
+
+    @Override
+    public void addListener(final MediaStatusListener listener) {
+        Objects.requireNonNull(listener);
+        listeners.add(listener);
     }
 
     @Override
@@ -170,6 +187,12 @@ final class MediaControllerImpl extends StandardApplicationController implements
     }
 
     @Override
+    public final void removeListener(final MediaStatusListener listener) {
+        Objects.requireNonNull(listener);
+        listeners.add(listener);
+    }
+
+    @Override
     public final MediaStatus seek(final Duration amount, final Duration timeout)
             throws IOException, TimeoutException {
         return request(new Seek(mediaSessionId, amount.getSeconds()), timeout);
@@ -188,7 +211,21 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     @Override
     protected final void appMessageReceived(final CastMessage message) {
-        // TODO, if status notify listener(s).
+        if (wire.isUnsolicited(message, MediaStatusResponse.TYPE)) {
+            try {
+                final Optional<MediaStatusData> optStatus =
+                        wire.parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
+                if (optStatus.isPresent()) {
+                    final MediaStatus ms = optStatus.get();
+                    LOGGER.fine(() -> "Received new media status [" + ms + "]");
+                    listeners.forEach(l -> l.mediaStatusUpdated(ms));
+                } else {
+                    LOGGER.fine(() -> "Received invalid media status");
+                }
+            } catch (final IOException e) {
+                LOGGER.log(Level.FINE, e, () -> "Could not parse received media status");
+            }
+        }
     }
 
     /**

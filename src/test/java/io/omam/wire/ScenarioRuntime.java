@@ -142,7 +142,7 @@ final class ScenarioRuntime implements CastDeviceControllerListener {
     }
 
     @Override
-    public final void status(final CastDeviceStatus status) {
+    public final void deviceStatusUpdated(final CastDeviceStatus status) {
         evts.add(new Event(EventType.DEVICE_STATUS, status));
     }
 

@@ -129,6 +129,19 @@ final class Payloads {
     }
 
     /**
+     * Determines if given message is an unsolicited message of the given type.
+     *
+     * @param message message
+     * @param type expected type of the payload
+     * @return {@code true} if unsolicited message of the given type, {@code false} otherwise
+     */
+    static boolean isUnsolicited(final CastMessage message, final String type) {
+        return parse(message)
+            .map(s -> s.type().isPresent() && s.type().get().equals(type) && !s.requestId().isPresent())
+            .orElse(false);
+    }
+
+    /**
      * Returns the next request ID to set into the payload of a request.
      *
      * @return the next request ID

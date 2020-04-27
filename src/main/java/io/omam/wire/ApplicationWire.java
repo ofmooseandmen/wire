@@ -42,6 +42,15 @@ import io.omam.wire.CastChannel.CastMessage;
 public interface ApplicationWire {
 
     /**
+     * Determines if given message is an unsolicited message of the given type.
+     *
+     * @param message message
+     * @param type expected type of the payload
+     * @return {@code true} if unsolicited message of the given type, {@code false} otherwise
+     */
+    boolean isUnsolicited(final CastMessage message, final String type);
+
+    /**
      * Obtains an instance of {@code T} from the payload of the given message.
      *
      * @param <T> the type of the desired object

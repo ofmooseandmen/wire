@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
@@ -78,6 +79,7 @@ final class CastV2DeviceController implements CastDeviceController {
 
     @Override
     public final void addListener(final CastDeviceControllerListener listener) {
+        Objects.requireNonNull(listener);
         connection.addListener(listener);
         receiver.addListener(listener);
     }
@@ -158,6 +160,7 @@ final class CastV2DeviceController implements CastDeviceController {
 
     @Override
     public void removeListener(final CastDeviceControllerListener listener) {
+        Objects.requireNonNull(listener);
         connection.removeListener(listener);
         receiver.removeListener(listener);
     }

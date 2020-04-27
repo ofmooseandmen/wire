@@ -28,52 +28,20 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package io.omam.wire;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.util.concurrent.TimeoutException;
-
-import io.omam.wire.CastChannel.CastMessage;
+package io.omam.wire.media;
 
 /**
- * Default {@link ApplicationWire} implementation.
+ * The listener interface for receiving <strong>unsolicited</strong> media status update events.
  */
-final class DefaultApplicationWire implements ApplicationWire {
 
-    /** communication channel. */
-    private final CastV2Channel channel;
+@FunctionalInterface
+public interface MediaStatusListener {
 
     /**
-     * Constructor.
+     * Invoked when the status of the current media session has been updated.
      *
-     * @param aChannel communication channel
+     * @param status the status of the current media session
      */
-    DefaultApplicationWire(final CastV2Channel aChannel) {
-        channel = aChannel;
-    }
-
-    @Override
-    public final boolean isUnsolicited(final CastMessage message, final String type) {
-        return Payloads.isUnsolicited(message, type);
-    }
-
-    @Override
-    public final <T extends Payload> T parse(final CastMessage message, final String type, final Class<T> clazz)
-            throws IOException {
-        return Payloads.parse(message, type, clazz);
-    }
-
-    @Override
-    public final <T extends Payload> CastMessage request(final String namespace, final String destination,
-            final T payload, final Duration timeout) throws IOException, TimeoutException {
-        return Requestor.stringPayload(channel).request(namespace, destination, payload, timeout);
-    }
-
-    @Override
-    public final <P extends Payload> void send(final String namespace, final String destination, final P payload) {
-        final CastMessage message = Payloads.build(namespace, destination, payload);
-        channel.send(message);
-    }
+    void mediaStatusUpdated(final MediaStatus status);
 
 }

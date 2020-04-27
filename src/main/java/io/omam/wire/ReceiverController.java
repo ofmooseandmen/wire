@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
+import static io.omam.wire.Payloads.isUnsolicited;
 import static io.omam.wire.Payloads.parse;
 
 import java.io.IOException;
@@ -38,7 +39,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -459,7 +460,7 @@ final class ReceiverController implements ChannelListener {
     private final CastV2Channel channel;
 
     /** listeners. */
-    private final List<CastDeviceStatusListener> listeners;
+    private final ConcurrentLinkedQueue<CastDeviceStatusListener> listeners;
 
     /**
      * Constructor.
@@ -468,22 +469,8 @@ final class ReceiverController implements ChannelListener {
      */
     ReceiverController(final CastV2Channel aChannel) {
         channel = aChannel;
-        listeners = new CopyOnWriteArrayList<>();
+        listeners = new ConcurrentLinkedQueue<>();
         channel.addListener(this, RECEIVER_NS);
-    }
-
-    /**
-     * Determines if given message is an unsolicited receiver status message sent by the device.
-     *
-     * @param message message
-     * @return {@true} if unsolicited receiver status message
-     */
-    private static boolean isUnsolicitedStatus(final CastMessage message) {
-        return parse(message)
-            .map(s -> s.type().isPresent()
-                && s.type().get().equals(ReceiverStatus.TYPE)
-                && !s.requestId().isPresent())
-            .orElse(false);
     }
 
     /**
@@ -499,11 +486,11 @@ final class ReceiverController implements ChannelListener {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        if (isUnsolicitedStatus(message)) {
+        if (isUnsolicited(message, ReceiverStatus.TYPE)) {
             try {
                 final ReceiverStatus rs = parseReceiverStatus(message);
                 LOGGER.fine(() -> "Received new device status [" + rs + "]");
-                listeners.forEach(l -> l.status(rs));
+                listeners.forEach(l -> l.deviceStatusUpdated(rs));
             } catch (final IOException e) {
                 LOGGER.log(Level.FINE, e, () -> "Could not parse received receiver status");
             }
@@ -518,7 +505,7 @@ final class ReceiverController implements ChannelListener {
     /**
      * Adds the given listener to receive device status events.
      *
-     * @param listener listener, not null
+     * @param listener listener
      */
     final void addListener(final CastDeviceStatusListener listener) {
         listeners.add(listener);
@@ -587,7 +574,7 @@ final class ReceiverController implements ChannelListener {
     /**
      * Removes the given listener so that it no longer receives device status events.
      *
-     * @param listener listener, not null
+     * @param listener listener
      */
     final void removeListener(final CastDeviceStatusListener listener) {
         listeners.remove(listener);

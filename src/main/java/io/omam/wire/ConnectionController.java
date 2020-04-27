@@ -39,10 +39,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -225,7 +223,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     private final Monitor monitor;
 
     /** listeners. */
-    private final List<ConnectionListener> listeners;
+    private final ConcurrentLinkedQueue<ConnectionListener> listeners;
 
     /** set of application sessions. */
     private final Set<String> sessions;
@@ -245,7 +243,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         state = State.CLOSED;
         monitor = new Monitor(() -> state == State.OPENED);
 
-        listeners = new CopyOnWriteArrayList<>();
+        listeners = new ConcurrentLinkedQueue<>();
 
         sessions = new HashSet<>();
     }
@@ -300,10 +298,9 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     /**
      * Adds the given listener to receive connection events.
      *
-     * @param listener listener, not null
+     * @param listener listener
      */
     final void addListener(final ConnectionListener listener) {
-        Objects.requireNonNull(listener);
         listeners.add(listener);
     }
 
@@ -400,10 +397,9 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     /**
      * Removes the given listener so that it no longer receives connection events.
      *
-     * @param listener listener, not null
+     * @param listener listener
      */
     final void removeListener(final ConnectionListener listener) {
-        Objects.requireNonNull(listener);
         listeners.remove(listener);
     }
 

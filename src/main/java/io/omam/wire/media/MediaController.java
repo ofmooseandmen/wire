@@ -68,6 +68,13 @@ public interface MediaController extends ApplicationController {
     }
 
     /**
+     * Adds the given listener to receive media status update events.
+     *
+     * @param listener listener, not null
+     */
+    void addListener(final MediaStatusListener listener);
+
+    /**
      * Requests the player to add the given medias to the end of the queue.
      *
      * @param medias list of medias to add
@@ -305,6 +312,13 @@ public interface MediaController extends ApplicationController {
      */
     MediaStatus removeFromQueue(final List<Integer> itemIds, final Duration timeout)
             throws IOException, TimeoutException;
+
+    /**
+     * Removes the given listener so that it no longer receives media status update events.
+     *
+     * @param listener listener, not null
+     */
+    void removeListener(final MediaStatusListener listener);
 
     /**
      * Requests the player to seek to current playback time + given {@code amount} in the media.

@@ -33,6 +33,7 @@ package io.omam.wire;
 /**
  * The listener interface for receiving <strong>unsolicited</strong> device status events.
  */
+@FunctionalInterface
 public interface CastDeviceStatusListener {
 
     /**
@@ -40,6 +41,6 @@ public interface CastDeviceStatusListener {
      *
      * @param status the device status
      */
-    void status(final CastDeviceStatus status);
+    void deviceStatusUpdated(final CastDeviceStatus status);
 
 }

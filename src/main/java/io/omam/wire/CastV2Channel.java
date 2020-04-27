@@ -41,11 +41,10 @@ import java.net.SocketException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -55,7 +54,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
@@ -167,8 +166,8 @@ final class CastV2Channel implements AutoCloseable {
                     } else {
                         endOfStream = true;
                     }
-                } catch (final SSLHandshakeException | SocketException e) {
-                    LOGGER.log(Level.FINE, "Socket closed", e);
+                } catch (final SSLException | SocketException e) {
+                    LOGGER.log(level(e), "Socket closed", e);
                     listeners.forEach(ChannelListener::socketError);
                     break;
                 } catch (final IOException e) {
@@ -200,8 +199,8 @@ final class CastV2Channel implements AutoCloseable {
                 try {
                     final CastMessage msg = sq.take();
                     doSend(msg);
-                } catch (final SocketException e) {
-                    LOGGER.log(Level.FINE, "Socket closed", e);
+                } catch (final SSLException | SocketException e) {
+                    LOGGER.log(level(e), "Socket closed", e);
                     listeners.forEach(ChannelListener::socketError);
                     break;
                 } catch (final IOException e) {
@@ -231,7 +230,7 @@ final class CastV2Channel implements AutoCloseable {
     private ExecutorService es;
 
     /** received message listeners. */
-    private final List<ByNamespaceListener> listeners;
+    private final ConcurrentLinkedQueue<ByNamespaceListener> listeners;
 
     /** future to cancel receiving messages. */
     private Future<?> receiver;
@@ -254,7 +253,7 @@ final class CastV2Channel implements AutoCloseable {
         sc = sslContext;
         socket = null;
         es = null;
-        listeners = new CopyOnWriteArrayList<>();
+        listeners = new ConcurrentLinkedQueue<>();
         receiver = null;
         sender = null;
         sq = new LinkedBlockingQueue<>();
@@ -272,6 +271,19 @@ final class CastV2Channel implements AutoCloseable {
         final SSLContext sc = SSLContext.getInstance("SSL");
         sc.init(null, new TrustManager[] { new CastX509TrustManager() }, new SecureRandom());
         return new CastV2Channel(address, port, sc);
+    }
+
+    /**
+     * Log level from I/O exception.
+     *
+     * @param e I/O exception
+     * @return log level
+     */
+    private static Level level(final IOException e) {
+        if (SSLException.class.isAssignableFrom(e.getClass())) {
+            return Level.WARNING;
+        }
+        return Level.FINE;
     }
 
     @Override
@@ -418,4 +430,5 @@ final class CastV2Channel implements AutoCloseable {
         }
         es.shutdown();
     }
+
 }
