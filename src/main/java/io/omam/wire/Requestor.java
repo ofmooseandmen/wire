@@ -43,7 +43,6 @@ import java.util.logging.Logger;
 import com.google.protobuf.MessageLite;
 
 import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payloads.AnyPayload;
 
 /**
  * A {@code Requestor} transmits a request to the device and awaits for a correlated response.
@@ -79,8 +78,8 @@ final class Requestor<T> implements ChannelListener {
 
     /** standard request/response correlation predicate. */
     private static final BiPredicate<CastMessage, CastMessage> STD_CORRELATOR = (req, resp) -> {
-        final Optional<AnyPayload> pReq = parse(req);
-        final Optional<AnyPayload> pResp = parse(resp);
+        final Optional<Payload.Any> pReq = parse(req);
+        final Optional<Payload.Any> pResp = parse(resp);
         if (pReq.isPresent() && pResp.isPresent()) {
             return pReq.get().requestId().isPresent() && pReq.get().requestId().equals(pResp.get().requestId());
         }

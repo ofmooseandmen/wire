@@ -52,20 +52,6 @@ import io.omam.wire.CastChannel.CastMessage.ProtocolVersion;
  */
 final class Payloads {
 
-    /**
-     * Class representing any payload - use for JSON parsing.
-     */
-    static final class AnyPayload extends Payload {
-
-        /**
-         * Constructor.
-         */
-        AnyPayload() {
-            // empty.
-        }
-
-    }
-
     /** request id counter. */
     private static final AtomicInteger NEXT_REQUEST_ID = new AtomicInteger(0);
 
@@ -125,19 +111,10 @@ final class Payloads {
      * @return {@code true} if given message has the given type
      */
     static boolean is(final CastMessage msg, final String type) {
-        return GSON.fromJson(msg.getPayloadUtf8(), AnyPayload.class).type().map(t -> t.equals(type)).orElse(false);
-    }
-
-    /**
-     * Determines if given message is an unsolicited message of the given type.
-     *
-     * @param message message
-     * @param type expected type of the payload
-     * @return {@code true} if unsolicited message of the given type, {@code false} otherwise
-     */
-    static boolean isUnsolicited(final CastMessage message, final String type) {
-        return parse(message)
-            .map(s -> s.type().isPresent() && s.type().get().equals(type) && !s.requestId().isPresent())
+        return GSON
+            .fromJson(msg.getPayloadUtf8(), Payload.Any.class)
+            .type()
+            .map(t -> t.equals(type))
             .orElse(false);
     }
 
@@ -151,12 +128,12 @@ final class Payloads {
     }
 
     /**
-     * Obtains an instance of {@code AnyPayload} from the payload of the given message.
+     * Obtains an instance of {@code Payload.Any} from the payload of the given message.
      *
      * @param msg message
-     * @return the parsed {@code AnyPayload} or empty
+     * @return the parsed {@code Payload.Any} or empty
      */
-    static Optional<AnyPayload> parse(final CastMessage msg) {
+    static Optional<Payload.Any> parse(final CastMessage msg) {
         Objects.requireNonNull(msg);
         final String payload = msg.getPayloadUtf8();
         if (payload == null || payload.isEmpty()) {
@@ -164,7 +141,7 @@ final class Payloads {
             return Optional.empty();
         }
         try {
-            return Optional.of(GSON.fromJson(payload, AnyPayload.class));
+            return Optional.of(GSON.fromJson(payload, Payload.Any.class));
         } catch (final JsonSyntaxException | ClassCastException | IllegalArgumentException e) {
             LOGGER.log(Level.WARNING, e, () -> "Could not parse [" + payload + "]");
             return Optional.empty();
@@ -194,7 +171,7 @@ final class Payloads {
 
         try {
 
-            final AnyPayload parsedType = GSON.fromJson(payload, AnyPayload.class);
+            final Payload.Any parsedType = GSON.fromJson(payload, Payload.Any.class);
             final String actualType = parsedType.responseType().orElseGet(() -> parsedType.type().orElse(null));
             if (!type.equals(actualType)) {
                 throw new IOException("Error: " + actualType + "; expected: " + type);

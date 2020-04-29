@@ -42,7 +42,6 @@ import java.util.function.Supplier;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java8.En;
 import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payloads.AnyPayload;
 
 /**
  * Steps to control the behaviour and probe the state of the emulated Cast device.
@@ -71,7 +70,7 @@ public final class EmulatedCastDeviceSteps implements En {
                     .orElseThrow(() -> new AssertionError("Message " + expected + " was not received"));
                 assertEquals(msg.getNamespace(), expected.namespace());
                 if (!expected.type().equals("AUTH")) {
-                    final AnyPayload parsed = parse(msg).orElseThrow(UNPARSABLE);
+                    final Payload.Any parsed = parse(msg).orElseThrow(UNPARSABLE);
                     assertEquals(parsed.type(), Optional.of(expected.type()));
                 }
             }

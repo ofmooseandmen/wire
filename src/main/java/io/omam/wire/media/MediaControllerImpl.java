@@ -77,6 +77,7 @@ import io.omam.wire.media.Payloads.Stop;
  * @see <a href="https://developers.google.com/cast/docs/reference/caf_receiver/cast.framework.messages">Google
  *      Cast Framework Messages</a>
  */
+// TODO log commands.
 final class MediaControllerImpl extends StandardApplicationController implements MediaController {
 
     /** media namespace. */
@@ -132,16 +133,19 @@ final class MediaControllerImpl extends StandardApplicationController implements
     @Override
     public final MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
             throws IOException, TimeoutException {
+        LOGGER.info(() -> "Adding " + medias.size() + " media to queue");
         return request(new QueueInsert(mediaSessionId, toItems(medias)), timeout);
     }
 
     @Override
     public final MediaStatus getMediaStatus(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Requesting media status");
         return request(GetStatus.INSTANCE, timeout);
     }
 
     @Override
     public final List<QueueItem> getQueueItems(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Requesting queued items");
         final String destination = details.transportId();
         CastMessage resp = wire.request(NAMESPACE, destination, new QueueGetItemsIds(mediaSessionId), timeout);
         final QueueItemIds queueItemIds = wire.parse(resp, QueueItemIds.TYPE, QueueItemIds.class);
@@ -153,6 +157,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     @Override
     public final MediaStatus load(final List<MediaInfo> medias, final RepeatMode repeatMode,
             final boolean autoplay, final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Loading " + medias.size() + " media");
         final QueueData queue = new QueueData(toItems(medias), repeatMode);
         final Load load = new Load(details.sessionId(), medias.get(0), autoplay, 0, queue);
         final MediaStatus resp = request(load, timeout);
@@ -162,27 +167,32 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     @Override
     public final MediaStatus next(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Requesting playback of next queued media");
         return request(QueueUpdate.jump(mediaSessionId, 1), timeout);
     }
 
     @Override
     public final MediaStatus pause(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Pausing playback");
         return request(new Pause(mediaSessionId), timeout);
     }
 
     @Override
     public final MediaStatus play(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Resuming playback");
         return request(new Play(mediaSessionId), timeout);
     }
 
     @Override
     public final MediaStatus previous(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Requesting playback of previous queued media");
         return request(QueueUpdate.jump(mediaSessionId, -1), timeout);
     }
 
     @Override
     public final MediaStatus removeFromQueue(final List<Integer> itemIds, final Duration timeout)
             throws IOException, TimeoutException {
+        LOGGER.info(() -> "Removing queue items " + itemIds);
         return request(new QueueRemove(mediaSessionId, itemIds), timeout);
     }
 
@@ -195,36 +205,50 @@ final class MediaControllerImpl extends StandardApplicationController implements
     @Override
     public final MediaStatus seek(final Duration amount, final Duration timeout)
             throws IOException, TimeoutException {
+        LOGGER.info(() -> "Seeking current media by " + amount);
         return request(new Seek(mediaSessionId, amount.getSeconds()), timeout);
     }
 
     @Override
     public final MediaStatus setRepeatMode(final RepeatMode mode, final Duration timeout)
             throws IOException, TimeoutException {
+        LOGGER.info(() -> "Setting playback repeat mode to " + mode);
         return request(QueueUpdate.repeatMode(mediaSessionId, mode), timeout);
     }
 
     @Override
     public final MediaStatus stop(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Stopping playback");
         return request(new Stop(mediaSessionId), timeout);
     }
 
     @Override
-    protected final void appMessageReceived(final CastMessage message) {
-        if (wire.isUnsolicited(message, MediaStatusResponse.TYPE)) {
-            try {
-                final Optional<MediaStatusData> optStatus =
-                        wire.parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
-                if (optStatus.isPresent()) {
-                    final MediaStatus ms = optStatus.get();
-                    LOGGER.fine(() -> "Received new media status [" + ms + "]");
-                    listeners.forEach(l -> l.mediaStatusUpdated(ms));
-                } else {
-                    LOGGER.fine(() -> "Received invalid media status");
-                }
-            } catch (final IOException e) {
-                LOGGER.log(Level.FINE, e, () -> "Could not parse received media status");
+    protected final void unsolicitedMessageReceived(final String type, final CastMessage message) {
+        if (MediaStatusResponse.TYPE.equals(type)) {
+            LOGGER.info(() -> "Received updated media status ");
+            LOGGER.fine(() -> "Received updated media status [" + message.getPayloadUtf8() + "]");
+            notifyMediaStatus(message);
+        }
+    }
+
+    /**
+     * Notifies listeners about the received media status.
+     *
+     * @param message the received message
+     */
+    private void notifyMediaStatus(final CastMessage message) {
+        try {
+            final Optional<MediaStatusData> optStatus =
+                    wire.parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
+            if (optStatus.isPresent()) {
+                final MediaStatus ms = optStatus.get();
+                LOGGER.fine(() -> "Received new media status [" + message.getPayloadUtf8() + "]");
+                listeners.forEach(l -> l.mediaStatusUpdated(ms));
+            } else {
+                LOGGER.fine(() -> "Received invalid media status");
             }
+        } catch (final IOException e) {
+            LOGGER.log(Level.FINE, e, () -> "Could not parse received media status");
         }
     }
 

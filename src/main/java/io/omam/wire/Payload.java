@@ -40,6 +40,20 @@ import java.util.Optional;
  */
 public abstract class Payload {
 
+    /**
+     * Class representing any payload - use for JSON parsing.
+     */
+    public static final class Any extends Payload {
+
+        /**
+         * Constructor.
+         */
+        Any() {
+            // empty.
+        }
+
+    }
+
     /** message type, or null if response. */
     private final String type;
 
@@ -72,7 +86,10 @@ public abstract class Payload {
      * @return the Id of the request, used to correlate request/response, if present.
      */
     final Optional<Integer> requestId() {
-        return requestId == null || requestId == 0 ? Optional.empty() : Optional.of(requestId);
+        if (requestId == null || requestId.intValue() == 0) {
+            return Optional.empty();
+        }
+        return Optional.of(requestId);
     }
 
     /**

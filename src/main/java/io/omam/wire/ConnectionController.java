@@ -280,6 +280,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
                 final boolean connecting = state == State.CONNECTING;
                 state = State.OPENED;
                 if (connecting) {
+                    LOGGER.info(() -> "Connection with device opened");
                     monitor.signalAll();
                 }
             } else if (is(message, "PING")) {
@@ -292,6 +293,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
 
     @Override
     public final void socketError() {
+        LOGGER.info("Closing connection after socket error");
         close(CastV2Channel::close, ConnectionListener::remoteConnectionClosed);
     }
 
@@ -334,7 +336,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
             try {
                 channel.addListener(this, CONNECTION_NS);
                 channel.addListener(this, HEARTBEAT_NS);
-                LOGGER.fine(() -> "Received authentication response, connecting...");
+                LOGGER.info(() -> "Received authentication response, connecting...");
                 /* OK to connect. */
                 /* ping the device. */
                 channel.send(PING_MSG);
@@ -353,7 +355,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
             }
         }
         final boolean opened = isOpened();
-        LOGGER.fine(() -> "Connection opened? " + opened);
+        LOGGER.info(() -> "Connection opened? " + opened);
         if (!opened) {
             LOGGER.warning("Failed to open connection with Cast device");
             throw new IOException("Failed to open connection with Cast device");

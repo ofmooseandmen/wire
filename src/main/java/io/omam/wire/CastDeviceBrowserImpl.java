@@ -100,6 +100,7 @@ final class CastDeviceBrowserImpl implements CastDeviceBrowser {
                 try {
                     final Optional<String> name =
                             service.attributes().value(FRIENDLY_NAME, StandardCharsets.UTF_8);
+                    LOGGER.info(() -> "Found Cast Device " + name + " [" + instanceName + "]");
                     final CastDeviceController client = CastDeviceController.v2(instanceName, address, port, name);
                     clients.put(service.name().toLowerCase(), client);
                     l.up(client);

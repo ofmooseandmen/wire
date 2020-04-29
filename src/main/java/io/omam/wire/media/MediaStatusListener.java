@@ -31,14 +31,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire.media;
 
 /**
- * The listener interface for receiving <strong>unsolicited</strong> media status update events.
+ * The listener interface for receiving <strong>unsolicited</strong> media status updates from the media
+ * application.
  */
-
 @FunctionalInterface
 public interface MediaStatusListener {
 
     /**
-     * Invoked when the status of the current media session has been updated.
+     * Invoked when the status of the current media session has been updated by the application.
      *
      * @param status the status of the current media session
      */

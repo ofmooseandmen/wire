@@ -54,11 +54,6 @@ final class DefaultApplicationWire implements ApplicationWire {
     }
 
     @Override
-    public final boolean isUnsolicited(final CastMessage message, final String type) {
-        return Payloads.isUnsolicited(message, type);
-    }
-
-    @Override
     public final <T extends Payload> T parse(final CastMessage message, final String type, final Class<T> clazz)
             throws IOException {
         return Payloads.parse(message, type, clazz);

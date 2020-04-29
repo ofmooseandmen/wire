@@ -38,11 +38,15 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
 /**
  * {@link CastDeviceController} implementing the Cast V2 protocol.
  */
 final class CastV2DeviceController implements CastDeviceController {
+
+    /** logger. */
+    private static final Logger LOGGER = Logger.getLogger(CastV2DeviceController.class.getName());
 
     /** message for exception. */
     private static final String CONNECTION_IS_NOT_OPENED = "Connection is not opened";
@@ -87,17 +91,20 @@ final class CastV2DeviceController implements CastDeviceController {
     @Override
     public final AppAvailabilities appsAvailability(final Collection<String> appIds, final Duration timeout)
             throws IOException, TimeoutException {
+        LOGGER.info(() -> "Request availability of applications  " + appIds + " on device " + deviceNameOrId());
         ensureConnected();
         return receiver.appAvailability(appIds, timeout);
     }
 
     @Override
     public final void close() {
+        LOGGER.info(() -> "Closing connection with device " + deviceNameOrId());
         connection.close();
     }
 
     @Override
     public final void connect(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Opening connection with device " + deviceNameOrId());
         connection.connect(timeout);
     }
 
@@ -118,6 +125,7 @@ final class CastV2DeviceController implements CastDeviceController {
 
     @Override
     public final CastDeviceStatus getDeviceStatus(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Requesting status of device " + deviceNameOrId());
         ensureConnected();
         return receiver.receiverStatus(timeout);
     }
@@ -129,13 +137,16 @@ final class CastV2DeviceController implements CastDeviceController {
 
     @Override
     public final void joinAppSession(final ApplicationController app) {
-        connection.joinAppSession(app.details().transportId());
+        final String transportId = app.details().transportId();
+        LOGGER.info(() -> "Joining application session " + transportId + " on device " + deviceNameOrId());
+        connection.joinAppSession(transportId);
     }
 
     @Override
     public final <T extends ApplicationController> T launchApp(final String appId,
             final BiFunction<ApplicationData, ApplicationWire, T> controllerSupplier, final boolean joinAppSession,
             final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Launching application " + appId + " on device " + deviceNameOrId());
         ensureConnected();
         final CastDeviceStatus status = receiver.launch(appId, timeout);
         final Collection<ApplicationData> apps = status.applications();
@@ -154,6 +165,7 @@ final class CastV2DeviceController implements CastDeviceController {
 
     @Override
     public final CastDeviceStatus muteDevice(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Muting device " + deviceNameOrId());
         ensureConnected();
         return receiver.mute(timeout);
     }
@@ -168,6 +180,7 @@ final class CastV2DeviceController implements CastDeviceController {
     @Override
     public final CastDeviceStatus setDeviceVolume(final double level, final Duration timeout)
             throws IOException, TimeoutException {
+        LOGGER.info(() -> "Setting volume of device " + deviceNameOrId() + " to " + level);
         ensureConnected();
         return receiver.setVolume(level, timeout);
     }
@@ -175,6 +188,7 @@ final class CastV2DeviceController implements CastDeviceController {
     @Override
     public final CastDeviceStatus stopApp(final ApplicationController app, final Duration timeout)
             throws IOException, TimeoutException {
+        LOGGER.info(() -> "Stopping application " + app.details().id() + " on device " + deviceNameOrId());
         ensureConnected();
         connection.leaveAppSession(app.details().transportId());
         final CastDeviceStatus cds = receiver.stopApp(app.details().sessionId(), timeout);
@@ -189,8 +203,18 @@ final class CastV2DeviceController implements CastDeviceController {
 
     @Override
     public final CastDeviceStatus unmuteDevice(final Duration timeout) throws IOException, TimeoutException {
+        LOGGER.info(() -> "Unmuting device " + deviceNameOrId());
         ensureConnected();
         return receiver.unmute(timeout);
+    }
+
+    /**
+     * Returns {@link #deviceName()} if present, {@link #deviceId()} otherwise.
+     *
+     * @return device name or id
+     */
+    private String deviceNameOrId() {
+        return name.orElse(id);
     }
 
     /**
@@ -200,6 +224,7 @@ final class CastV2DeviceController implements CastDeviceController {
      */
     private void ensureConnected() throws IOException {
         if (!connection.isOpened()) {
+            LOGGER.warning(() -> "Not connected with device");
             throw new IOException(CONNECTION_IS_NOT_OPENED);
         }
     }

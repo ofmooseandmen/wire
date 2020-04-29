@@ -59,7 +59,7 @@ public final class ControllerSteps implements En {
         }
 
         @Override
-        protected final void appMessageReceived(final CastMessage message) {
+        protected final void unsolicitedMessageReceived(final String type, final CastMessage message) {
             // empty.
         }
 

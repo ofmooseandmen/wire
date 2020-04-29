@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire;
 
-import static io.omam.wire.Payloads.isUnsolicited;
 import static io.omam.wire.Payloads.parse;
 
 import java.io.IOException;
@@ -474,6 +473,20 @@ final class ReceiverController implements ChannelListener {
     }
 
     /**
+     * Determines if given message is an unsolicited receiver status.
+     *
+     * @param message message
+     * @return {@code true} if unsolicited message of the given type, {@code false} otherwise
+     */
+    private static boolean isUnsolicitedReceiverStatus(final CastMessage message) {
+        return parse(message)
+            .map(s -> s.type().isPresent()
+                && s.type().get().equals(ReceiverStatus.TYPE)
+                && !s.requestId().isPresent())
+            .orElse(false);
+    }
+
+    /**
      * Obtains an instance of {@code ReceiverStatus} from the given payload.
      *
      * @param resp response
@@ -486,10 +499,11 @@ final class ReceiverController implements ChannelListener {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        if (isUnsolicited(message, ReceiverStatus.TYPE)) {
+        if (isUnsolicitedReceiverStatus(message)) {
             try {
                 final ReceiverStatus rs = parseReceiverStatus(message);
-                LOGGER.fine(() -> "Received new device status [" + rs + "]");
+                LOGGER.info(() -> "Received updated device status ");
+                LOGGER.fine(() -> "Received updated device status [" + message.getPayloadUtf8() + "]");
                 listeners.forEach(l -> l.deviceStatusUpdated(rs));
             } catch (final IOException e) {
                 LOGGER.log(Level.FINE, e, () -> "Could not parse received receiver status");

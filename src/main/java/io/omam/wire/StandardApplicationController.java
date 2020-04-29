@@ -33,25 +33,17 @@ package io.omam.wire;
 import static io.omam.wire.Payloads.parse;
 
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payloads.AnyPayload;
 
 /**
- * Standard application controller that assume request/reply correlation is implemented through the
- * {@link Payload#requestId() payload request identifier}. *
+ * Standard application controller that assumes request/reply correlation is implemented through the
+ * {@link Payload#requestId() payload request identifier}.
  *
  * @see CastDeviceController#launchApp(String, java.util.function.BiFunction, java.time.Duration)
  * @see CastDeviceController#stopApp(ApplicationController, java.time.Duration)
  */
 public abstract class StandardApplicationController implements ApplicationController {
-
-    /** standard response predicate. */
-    private static final Predicate<CastMessage> STD_RESP_PREDICATE = m -> {
-        final Optional<AnyPayload> rs = parse(m);
-        return rs.isPresent() && !rs.get().requestId().isPresent();
-    };
 
     /** the details of this application. */
     private final ApplicationData details;
@@ -72,10 +64,19 @@ public abstract class StandardApplicationController implements ApplicationContro
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        if (!STD_RESP_PREDICATE.test(message)
-            && details.namespaces().stream().anyMatch(n -> n.name().equals(message.getNamespace()))) {
-            appMessageReceived(message);
+        final Optional<Payload.Any> optPayload = parse(message);
+        if (!optPayload.isPresent()) {
+            return;
         }
+        final Payload.Any payload = optPayload.get();
+        if (payload.requestId().isPresent()) {
+            return;
+        }
+        final Optional<String> optType = payload.type();
+        if (!optType.isPresent()) {
+            return;
+        }
+        unsolicitedMessageReceived(optType.get(), message);
     }
 
     @Override
@@ -84,13 +85,14 @@ public abstract class StandardApplicationController implements ApplicationContro
     }
 
     /**
-     * Invoked when a message from the application has been received.
+     * Invoked when an unsolicited message with from the application has been received.
      * <p>
      * This method is invoked only with messages of the {@link ApplicationData#namespaces() application namespaces}
      * which are not responses to requests.
      *
+     * @param type the type of the payload
      * @param message application message
      */
-    protected abstract void appMessageReceived(final CastMessage message);
+    protected abstract void unsolicitedMessageReceived(final String type, final CastMessage message);
 
 }
