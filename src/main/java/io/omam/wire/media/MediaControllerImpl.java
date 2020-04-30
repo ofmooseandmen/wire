@@ -317,10 +317,9 @@ final class MediaControllerImpl extends StandardApplicationController implements
      */
     private void throwIfError(final CastMessage resp) throws IOException, MediaRequestException {
         final Optional<String> opType = wire.parse(resp).type();
-        if (opType.isEmpty()) {
+        if (!opType.isPresent()) {
             throw new IOException("Invalid response - unknown type");
         }
-
         final String type = opType.get();
         if (ERRORS.contains(type)) {
             final Error error = wire.parse(resp, type, ErrorData.class);
