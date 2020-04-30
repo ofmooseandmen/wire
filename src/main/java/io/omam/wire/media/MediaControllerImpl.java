@@ -32,6 +32,8 @@ package io.omam.wire.media;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -46,6 +48,7 @@ import io.omam.wire.ApplicationWire;
 import io.omam.wire.CastChannel.CastMessage;
 import io.omam.wire.Payload;
 import io.omam.wire.StandardApplicationController;
+import io.omam.wire.media.Payloads.ErrorData;
 import io.omam.wire.media.Payloads.GetStatus;
 import io.omam.wire.media.Payloads.Load;
 import io.omam.wire.media.Payloads.MediaStatusData;
@@ -77,7 +80,6 @@ import io.omam.wire.media.Payloads.Stop;
  * @see <a href="https://developers.google.com/cast/docs/reference/caf_receiver/cast.framework.messages">Google
  *      Cast Framework Messages</a>
  */
-// TODO log commands.
 final class MediaControllerImpl extends StandardApplicationController implements MediaController {
 
     /** media namespace. */
@@ -85,6 +87,10 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     /** logger. */
     private static final Logger LOGGER = Logger.getLogger(MediaControllerImpl.class.getName());
+
+    /** all error types. */
+    private static final Collection<String> ERRORS =
+            Arrays.stream(ErrorType.values()).map(ErrorType::name).collect(Collectors.toList());
 
     /** application details. */
     private final ApplicationData details;
@@ -132,22 +138,27 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     @Override
     public final MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
-            throws IOException, TimeoutException {
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Adding " + medias.size() + " media to queue");
         return request(new QueueInsert(mediaSessionId, toItems(medias)), timeout);
     }
 
     @Override
-    public final MediaStatus getMediaStatus(final Duration timeout) throws IOException, TimeoutException {
+    public final MediaStatus getMediaStatus(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting media status");
         return request(GetStatus.INSTANCE, timeout);
     }
 
     @Override
-    public final List<QueueItem> getQueueItems(final Duration timeout) throws IOException, TimeoutException {
+    public final List<QueueItem> getQueueItems(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting queued items");
         final String destination = details.transportId();
         CastMessage resp = wire.request(NAMESPACE, destination, new QueueGetItemsIds(mediaSessionId), timeout);
+
+        throwIfError(resp);
+
         final QueueItemIds queueItemIds = wire.parse(resp, QueueItemIds.TYPE, QueueItemIds.class);
         resp = wire
             .request(NAMESPACE, destination, new QueueGetItems(mediaSessionId, queueItemIds.itemIds()), timeout);
@@ -156,7 +167,8 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     @Override
     public final MediaStatus load(final List<MediaInfo> medias, final RepeatMode repeatMode,
-            final boolean autoplay, final Duration timeout) throws IOException, TimeoutException {
+            final boolean autoplay, final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Loading " + medias.size() + " media");
         final QueueData queue = new QueueData(toItems(medias), repeatMode);
         final Load load = new Load(details.sessionId(), medias.get(0), autoplay, 0, queue);
@@ -166,32 +178,36 @@ final class MediaControllerImpl extends StandardApplicationController implements
     }
 
     @Override
-    public final MediaStatus next(final Duration timeout) throws IOException, TimeoutException {
+    public final MediaStatus next(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting playback of next queued media");
         return request(QueueUpdate.jump(mediaSessionId, 1), timeout);
     }
 
     @Override
-    public final MediaStatus pause(final Duration timeout) throws IOException, TimeoutException {
+    public final MediaStatus pause(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Pausing playback");
         return request(new Pause(mediaSessionId), timeout);
     }
 
     @Override
-    public final MediaStatus play(final Duration timeout) throws IOException, TimeoutException {
+    public final MediaStatus play(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Resuming playback");
         return request(new Play(mediaSessionId), timeout);
     }
 
     @Override
-    public final MediaStatus previous(final Duration timeout) throws IOException, TimeoutException {
+    public final MediaStatus previous(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting playback of previous queued media");
         return request(QueueUpdate.jump(mediaSessionId, -1), timeout);
     }
 
     @Override
     public final MediaStatus removeFromQueue(final List<Integer> itemIds, final Duration timeout)
-            throws IOException, TimeoutException {
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Removing queue items " + itemIds);
         return request(new QueueRemove(mediaSessionId, itemIds), timeout);
     }
@@ -204,20 +220,21 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
     @Override
     public final MediaStatus seek(final Duration amount, final Duration timeout)
-            throws IOException, TimeoutException {
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Seeking current media by " + amount);
         return request(new Seek(mediaSessionId, amount.getSeconds()), timeout);
     }
 
     @Override
     public final MediaStatus setRepeatMode(final RepeatMode mode, final Duration timeout)
-            throws IOException, TimeoutException {
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Setting playback repeat mode to " + mode);
         return request(QueueUpdate.repeatMode(mediaSessionId, mode), timeout);
     }
 
     @Override
-    public final MediaStatus stop(final Duration timeout) throws IOException, TimeoutException {
+    public final MediaStatus stop(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Stopping playback");
         return request(new Stop(mediaSessionId), timeout);
     }
@@ -225,9 +242,25 @@ final class MediaControllerImpl extends StandardApplicationController implements
     @Override
     protected final void unsolicitedMessageReceived(final String type, final CastMessage message) {
         if (MediaStatusResponse.TYPE.equals(type)) {
-            LOGGER.info(() -> "Received updated media status ");
-            LOGGER.fine(() -> "Received updated media status [" + message.getPayloadUtf8() + "]");
             notifyMediaStatus(message);
+        } else if (ErrorType.ERROR.name().equals(type)) {
+            notifyMediaError(message);
+        }
+    }
+
+    /**
+     * Notifies listeners about the received error.
+     *
+     * @param message the received message
+     */
+    private void notifyMediaError(final CastMessage message) {
+        LOGGER.warning(() -> "Received media error");
+        try {
+            final Error error = wire.parse(message, ErrorType.ERROR.name(), ErrorData.class);
+            LOGGER.warning(() -> "Received media error [" + message.getPayloadUtf8() + "]");
+            listeners.forEach(l -> l.mediaErrorReceived(error));
+        } catch (final IOException e) {
+            LOGGER.log(Level.FINE, e, () -> "Could not parse received media error");
         }
     }
 
@@ -237,6 +270,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
      * @param message the received message
      */
     private void notifyMediaStatus(final CastMessage message) {
+        LOGGER.info(() -> "Received updated media status");
         try {
             final Optional<MediaStatusData> optStatus =
                     wire.parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
@@ -260,14 +294,38 @@ final class MediaControllerImpl extends StandardApplicationController implements
      * @return current media status, never null
      * @throws IOException in case of I/O error
      * @throws TimeoutException if the timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
      */
     private MediaStatus request(final Payload payload, final Duration timeout)
-            throws IOException, TimeoutException {
+            throws IOException, TimeoutException, MediaRequestException {
         final String destination = details.transportId();
         final CastMessage resp = wire.request(NAMESPACE, destination, payload, timeout);
+
+        throwIfError(resp);
+
         final Optional<MediaStatusData> status =
                 wire.parse(resp, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
-        return status.orElseThrow(() -> new IOException("Invalid media status"));
+        return status.orElseThrow(() -> new IOException("Invalid response - no media status"));
+    }
+
+    /**
+     * Throws {@link MediaRequestException} if given response is an error.
+     *
+     * @param resp message
+     * @throws IOException in case of I/O error
+     * @throws MediaRequestException if message is an error
+     */
+    private void throwIfError(final CastMessage resp) throws IOException, MediaRequestException {
+        final Optional<String> opType = wire.parse(resp).type();
+        if (opType.isEmpty()) {
+            throw new IOException("Invalid response - unknown type");
+        }
+
+        final String type = opType.get();
+        if (ERRORS.contains(type)) {
+            final Error error = wire.parse(resp, type, ErrorData.class);
+            throw new MediaRequestException(error);
+        }
     }
 
 }

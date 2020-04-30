@@ -35,11 +35,21 @@ import java.time.Duration;
 import java.util.concurrent.TimeoutException;
 
 import io.omam.wire.CastChannel.CastMessage;
+import io.omam.wire.Payload.Any;
 
 /**
- * An API provided to {@link ApplicationController application controller}s to communicate with the Cast device.
+ * An API provided to an {@link ApplicationController application controller} to communicate with the Cast device.
  */
 public interface ApplicationWire {
+
+    /**
+     * Obtains an instance of {@code Payload.Any} from the payload of the given message.
+     * 
+     * @param message message
+     * @return the parsed {@code Payload.Any}
+     * @throws IOException if the payload cannot be parsed
+     */
+    Any parse(final CastMessage message) throws IOException;
 
     /**
      * Obtains an instance of {@code T} from the payload of the given message.
@@ -49,7 +59,7 @@ public interface ApplicationWire {
      * @param type expected payload type
      * @param clazz the class of {@code T}
      * @return the parsed {@code T}
-     * @throws IOException if the payload is not of the given type or the it cannot be parsed
+     * @throws IOException if the payload is not of the given type or cannot be parsed
      */
     <T extends Payload> T parse(final CastMessage message, final String type, final Class<T> clazz)
             throws IOException;

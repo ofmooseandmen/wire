@@ -28,53 +28,39 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package io.omam.wire;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.util.concurrent.TimeoutException;
-
-import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payload.Any;
+package io.omam.wire.media;
 
 /**
- * Default {@link ApplicationWire} implementation.
+ * Thrown to indicate that a media request was rejected by the Cast device.
  */
-final class DefaultApplicationWire implements ApplicationWire {
+public final class MediaRequestException extends Exception {
 
-    /** communication channel. */
-    private final CastV2Channel channel;
+    /** serial version UID. */
+    private static final long serialVersionUID = -8039161231551635859L;
+
+    /** message. */
+    private static final String MSG = "Media request rejected";
+
+    /** error returned by the Cast device. */
+    private final Error error;
 
     /**
      * Constructor.
      *
-     * @param aChannel communication channel
+     * @param anError error returned by the Cast device
      */
-    DefaultApplicationWire(final CastV2Channel aChannel) {
-        channel = aChannel;
+    MediaRequestException(final Error anError) {
+        super(MSG);
+        error = anError;
     }
 
-    @Override
-    public final Any parse(final CastMessage message) throws IOException {
-        return Payloads.parse(message).orElseThrow(() -> new IOException("Could not parse message"));
-    }
-
-    @Override
-    public final <T extends Payload> T parse(final CastMessage message, final String type, final Class<T> clazz)
-            throws IOException {
-        return Payloads.parse(message, type, clazz);
-    }
-
-    @Override
-    public final <T extends Payload> CastMessage request(final String namespace, final String destination,
-            final T payload, final Duration timeout) throws IOException, TimeoutException {
-        return Requestor.stringPayload(channel).request(namespace, destination, payload, timeout);
-    }
-
-    @Override
-    public final <P extends Payload> void send(final String namespace, final String destination, final P payload) {
-        final CastMessage message = Payloads.build(namespace, destination, payload);
-        channel.send(message);
+    /**
+     * Returns the error returned by the Cast device.
+     *
+     * @return the error returned by the Cast device
+     */
+    public final Error error() {
+        return error;
     }
 
 }

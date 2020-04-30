@@ -45,6 +45,56 @@ import io.omam.wire.Volume;
 @SuppressWarnings("javadoc")
 final class Payloads {
 
+    static final class ErrorData extends Payload implements Error {
+
+        /** detailed error code, may be null. */
+        private Integer detailedErrorCode;
+
+        /** error reason, may be null. */
+        private String reason;
+
+        /** ID of the queue item, may be null. */
+        private Integer itemId;
+
+        /**
+         * Constructor.
+         */
+        private ErrorData() {
+            /* empty, initialised by GSON. */
+        }
+
+        @Override
+        public final Optional<Integer> detailedErrorCode() {
+            return Optional.ofNullable(detailedErrorCode);
+        }
+
+        @Override
+        public final Optional<ErrorReason> errorReason() {
+            if (reason == null) {
+                return Optional.empty();
+            }
+            try {
+                return Optional.of(ErrorReason.valueOf(reason));
+            } catch (final IllegalArgumentException e) {
+                return Optional.empty();
+            }
+        }
+
+        @Override
+        public final ErrorType errorType() {
+            try {
+                return type().map(ErrorType::valueOf).orElse(ErrorType.ERROR);
+            } catch (final IllegalArgumentException e) {
+                return ErrorType.ERROR;
+            }
+        }
+
+        @Override
+        public final Optional<Integer> itemId() {
+            return Optional.ofNullable(itemId);
+        }
+    }
+
     /**
      * Get Status request payload.
      */

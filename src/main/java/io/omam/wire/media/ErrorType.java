@@ -31,22 +31,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire.media;
 
 /**
- * The listener interface for receiving <strong>unsolicited</strong> media updates from the media application.
+ * Represents media error message types.
+ *
+ * @see <a href=
+ *      "https://developers.google.com/cast/docs/reference/caf_receiver/cast.framework.messages#.ErrorType">Google
+ *      Cast Reference: ErrorType</a>
  */
-public interface MediaStatusListener {
+public enum ErrorType {
 
-    /**
-     * Invoked when a media error has been sent by the application.
-     * 
-     * @param error the error
-     */
-    void mediaErrorReceived(final Error error);
-
-    /**
-     * Invoked when the status of the current media session has been updated by the application.
-     *
-     * @param status the status of the current media session
-     */
-    void mediaStatusUpdated(final MediaStatus status);
+    /** Returned when the player state is invalid to fulfill the request. */
+    INVALID_PLAYER_STATE,
+    /** Returned when the LOAD request failed. */
+    LOAD_FAILED,
+    /** Returned when the LOAD request is cancelled by a second incoming LOAD request. */
+    LOAD_CANCELLED,
+    /** Returned when the request is not valid. */
+    INVALID_REQUEST,
+    /** Generic error, for any other error case. */
+    ERROR;
 
 }

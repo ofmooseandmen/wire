@@ -83,13 +83,24 @@ public abstract class Payload {
     }
 
     /**
-     * @return the Id of the request, used to correlate request/response, if present.
+     * Returns the ID of the request, used to correlate request/response, if present.
+     *
+     * @return the ID of the request, if present
      */
-    final Optional<Integer> requestId() {
+    public final Optional<Integer> requestId() {
         if (requestId == null || requestId.intValue() == 0) {
             return Optional.empty();
         }
         return Optional.of(requestId);
+    }
+
+    /**
+     * Returns the message type, if present.
+     *
+     * @return the message type, if present
+     */
+    public final Optional<String> type() {
+        return Optional.ofNullable(type);
     }
 
     /**
@@ -106,13 +117,6 @@ public abstract class Payload {
      */
     final void setRequestId(final int aRequestId) {
         requestId = aRequestId;
-    }
-
-    /**
-     * @return the message type, if present.
-     */
-    final Optional<String> type() {
-        return Optional.ofNullable(type);
     }
 
 }

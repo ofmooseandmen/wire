@@ -76,6 +76,8 @@ public abstract class StandardApplicationController implements ApplicationContro
         if (!optType.isPresent()) {
             return;
         }
+        // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/chromecast-caf-receiver/cast.framework.events.d.ts
+        // if error, call errorReceived(Error);
         unsolicitedMessageReceived(optType.get(), message);
     }
 

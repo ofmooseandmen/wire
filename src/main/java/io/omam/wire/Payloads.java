@@ -174,6 +174,7 @@ final class Payloads {
             final Payload.Any parsedType = GSON.fromJson(payload, Payload.Any.class);
             final String actualType = parsedType.responseType().orElseGet(() -> parsedType.type().orElse(null));
             if (!type.equals(actualType)) {
+                LOGGER.warning(() -> "Unexpected payload: " + msg.getPayloadUtf8());
                 throw new IOException("Error: " + actualType + "; expected: " + type);
             }
 

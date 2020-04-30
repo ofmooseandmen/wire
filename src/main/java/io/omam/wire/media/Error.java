@@ -28,53 +28,41 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package io.omam.wire;
+package io.omam.wire.media;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.concurrent.TimeoutException;
-
-import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payload.Any;
+import java.util.Optional;
 
 /**
- * Default {@link ApplicationWire} implementation.
+ * An unsolicited error send by the cast device.
  */
-final class DefaultApplicationWire implements ApplicationWire {
-
-    /** communication channel. */
-    private final CastV2Channel channel;
+public interface Error {
 
     /**
-     * Constructor.
+     * Returns the detailed error code.
      *
-     * @param aChannel communication channel
+     * @return this error detailed error code, if provided
      */
-    DefaultApplicationWire(final CastV2Channel aChannel) {
-        channel = aChannel;
-    }
+    Optional<Integer> detailedErrorCode();
 
-    @Override
-    public final Any parse(final CastMessage message) throws IOException {
-        return Payloads.parse(message).orElseThrow(() -> new IOException("Could not parse message"));
-    }
+    /**
+     * Returns the {@link ErrorReason reason}.
+     *
+     * @return this error reason, if provided
+     */
+    Optional<ErrorReason> errorReason();
 
-    @Override
-    public final <T extends Payload> T parse(final CastMessage message, final String type, final Class<T> clazz)
-            throws IOException {
-        return Payloads.parse(message, type, clazz);
-    }
+    /**
+     * Returns the error type.
+     *
+     * @return the error type
+     */
+    ErrorType errorType();
 
-    @Override
-    public final <T extends Payload> CastMessage request(final String namespace, final String destination,
-            final T payload, final Duration timeout) throws IOException, TimeoutException {
-        return Requestor.stringPayload(channel).request(namespace, destination, payload, timeout);
-    }
-
-    @Override
-    public final <P extends Payload> void send(final String namespace, final String destination, final P payload) {
-        final CastMessage message = Payloads.build(namespace, destination, payload);
-        channel.send(message);
-    }
+    /**
+     * Returns the ID of the queue item, if the error is related to one.
+     *
+     * @return the ID of the queue item, if provided
+     */
+    Optional<Integer> itemId();
 
 }
