@@ -39,6 +39,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -101,8 +102,8 @@ final class MediaControllerImpl extends StandardApplicationController implements
     /** listeners. */
     private final ConcurrentLinkedQueue<MediaStatusListener> listeners;
 
-    /** current media session ID or -1. */
-    private int mediaSessionId;
+    /** current media session ID or empty if not load. */
+    private Optional<Integer> mediaSessionId;
 
     /**
      * Constructor.
@@ -115,7 +116,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
         details = someDetails;
         wire = aWire;
         listeners = new ConcurrentLinkedQueue<>();
-        mediaSessionId = -1;
+        mediaSessionId = Optional.empty();
     }
 
     /**
@@ -140,7 +141,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     public final MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Adding " + medias.size() + " media to queue");
-        return request(new QueueInsert(mediaSessionId, toItems(medias)), timeout);
+        return request(id -> new QueueInsert(id, toItems(medias)), timeout);
     }
 
     @Override
@@ -154,14 +155,14 @@ final class MediaControllerImpl extends StandardApplicationController implements
     public final List<QueueItem> getQueueItems(final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting queued items");
+        final int mid = mediaSessionId.orElseThrow(() -> new IOException("Invalid request - no media session"));
         final String destination = details.transportId();
-        CastMessage resp = wire.request(NAMESPACE, destination, new QueueGetItemsIds(mediaSessionId), timeout);
+        CastMessage resp = wire.request(NAMESPACE, destination, new QueueGetItemsIds(mid), timeout);
 
         throwIfError(resp);
 
         final QueueItemIds queueItemIds = wire.parse(resp, QueueItemIds.TYPE, QueueItemIds.class);
-        resp = wire
-            .request(NAMESPACE, destination, new QueueGetItems(mediaSessionId, queueItemIds.itemIds()), timeout);
+        resp = wire.request(NAMESPACE, destination, new QueueGetItems(mid, queueItemIds.itemIds()), timeout);
         return wire.parse(resp, QueueItems.TYPE, QueueItems.class).items();
     }
 
@@ -173,7 +174,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
         final QueueData queue = new QueueData(toItems(medias), repeatMode);
         final Load load = new Load(details.sessionId(), medias.get(0), autoplay, 0, queue);
         final MediaStatus resp = request(load, timeout);
-        mediaSessionId = resp.mediaSessionId();
+        mediaSessionId = Optional.of(resp.mediaSessionId());
         return resp;
     }
 
@@ -181,35 +182,35 @@ final class MediaControllerImpl extends StandardApplicationController implements
     public final MediaStatus next(final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting playback of next queued media");
-        return request(QueueUpdate.jump(mediaSessionId, 1), timeout);
+        return request(id -> QueueUpdate.jump(id, 1), timeout);
     }
 
     @Override
     public final MediaStatus pause(final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Pausing playback");
-        return request(new Pause(mediaSessionId), timeout);
+        return request(Pause::new, timeout);
     }
 
     @Override
     public final MediaStatus play(final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Resuming playback");
-        return request(new Play(mediaSessionId), timeout);
+        return request(Play::new, timeout);
     }
 
     @Override
     public final MediaStatus previous(final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting playback of previous queued media");
-        return request(QueueUpdate.jump(mediaSessionId, -1), timeout);
+        return request(id -> QueueUpdate.jump(id, -1), timeout);
     }
 
     @Override
     public final MediaStatus removeFromQueue(final List<Integer> itemIds, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Removing queue items " + itemIds);
-        return request(new QueueRemove(mediaSessionId, itemIds), timeout);
+        return request(id -> new QueueRemove(id, itemIds), timeout);
     }
 
     @Override
@@ -222,21 +223,24 @@ final class MediaControllerImpl extends StandardApplicationController implements
     public final MediaStatus seek(final Duration amount, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Seeking current media by " + amount);
-        return request(new Seek(mediaSessionId, amount.getSeconds()), timeout);
+        return request(id -> new Seek(id, amount.getSeconds()), timeout);
     }
 
     @Override
     public final MediaStatus setRepeatMode(final RepeatMode mode, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Setting playback repeat mode to " + mode);
-        return request(QueueUpdate.repeatMode(mediaSessionId, mode), timeout);
+        return request(id -> QueueUpdate.repeatMode(id, mode), timeout);
     }
 
     @Override
     public final MediaStatus stop(final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Stopping playback");
-        return request(new Stop(mediaSessionId), timeout);
+        final MediaStatus resp = request(Stop::new, timeout);
+        /* media session terminated. */
+        mediaSessionId = Optional.empty();
+        return resp;
     }
 
     @Override
@@ -277,6 +281,10 @@ final class MediaControllerImpl extends StandardApplicationController implements
             if (optStatus.isPresent()) {
                 final MediaStatus ms = optStatus.get();
                 LOGGER.fine(() -> "Received new media status [" + message.getPayloadUtf8() + "]");
+                if (!mediaSessionId.isPresent()) {
+                    /* load response not received before timeout, but was successful anyway. */
+                    mediaSessionId = Optional.of(ms.mediaSessionId());
+                }
                 listeners.forEach(l -> l.mediaStatusUpdated(ms));
             } else {
                 LOGGER.fine(() -> "Received invalid media status");
@@ -284,6 +292,24 @@ final class MediaControllerImpl extends StandardApplicationController implements
         } catch (final IOException e) {
             LOGGER.log(Level.FINE, e, () -> "Could not parse received media status");
         }
+    }
+
+    /**
+     * Sends a request to the player and wait for the response.
+     *
+     * @param f function that takes a media session ID and returns the request payload
+     * @param timeout response timeout
+     * @return current media status, never null
+     * @throws IOException in case of I/O error
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
+     */
+    private MediaStatus request(final Function<Integer, Payload> f, final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
+        final Payload payload = mediaSessionId
+            .map(i -> f.apply(i))
+            .orElseThrow(() -> new IOException("Invalid request - no media session"));
+        return request(payload, timeout);
     }
 
     /**
