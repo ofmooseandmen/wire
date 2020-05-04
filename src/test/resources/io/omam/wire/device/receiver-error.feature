@@ -29,7 +29,7 @@ Feature: Handling error responses
     Then a "java.io.IOException" shall be thrown with message containing "Connection is not opened"
 
   @EmulatedDevice @RealDevice
-  Scenario: Request uninstalled application launch
+  Scenario: Request unknown application launch
     Given the connection with the device has been opened
     When the application "FOOBAR" is requested to be launched
     Then a "java.io.IOException" shall be thrown with message containing "LAUNCH_ERROR"
