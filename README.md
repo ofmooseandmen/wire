@@ -1,7 +1,6 @@
 # Wire
 
-[![travis build status](https://img.shields.io/travis/ofmooseandmen/wire/master.svg?label=travis+build)](https://travis-ci.org/ofmooseandmen/wire)
-[![appveyor build status](https://ci.appveyor.com/api/projects/status/ddk4r0s84dd86rt0?svg=true)](https://ci.appveyor.com/project/ofmooseandmen/wire)
+[![CI](https://github.com/ofmooseandmen/wire/workflows/CI/badge.svg)](https://github.com/ofmooseandmen/wire/actions?query=workflow%3ACI)
 [![codecov.io](https://codecov.io/github/ofmooseandmen/wire/branches/master/graphs/badge.svg)](https://codecov.io/github/ofmooseandmen/wire)
 [![license](https://img.shields.io/badge/license-BSD3-lightgray.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
