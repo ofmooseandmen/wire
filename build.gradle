@@ -1,13 +1,16 @@
+import org.gradle.plugins.ide.eclipse.model.SourceFolder
+
 plugins {
-    id 'base'
-    id 'java-library'
-    id 'eclipse'
     id 'com.google.protobuf' version '0.8.12'
-    id 'com.bmuschko.nexus' version '2.3.1'
+    id 'eclipse'
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
 }
-apply from: 'gradle/eclipse-prefs/eclipse.gradle'
+apply from: 'resources/eclipse/eclipse.gradle'
 
 repositories {
+    // mavenLocal()
     mavenCentral()
 }
 
@@ -23,24 +26,14 @@ dependencies {
     implementation(
         'com.google.protobuf:protobuf-java:3.11.4',
         'com.google.code.gson:gson:2.8.6',
-        'com.github.ofmooseandmen:halo:2018.03.1'
+        'com.github.ofmooseandmen:halo:1.0.0'
     )
     testImplementation(
-        'org.junit.vintage:junit-vintage-engine:5.6.1',
         'io.cucumber:cucumber-java:5.6.0',
-        'io.cucumber:cucumber-java8:5.6.0',
-        'io.cucumber:cucumber-junit:5.6.0',
         'io.cucumber:cucumber-picocontainer:5.6.0',
+        'org.junit.jupiter:junit-jupiter-api:5.6.1',
         'org.awaitility:awaitility:4.0.2'
     )
-}
-
-sourceSets {
-    main {
-        java {
-            srcDirs 'build/generated/source/proto/main/java'
-        }
-    }
 }
 
 protobuf {
@@ -49,20 +42,60 @@ protobuf {
     }
 }
 
+// use cucumberTest instead
 test {
-    useJUnit()
-    forkEvery = 1
-    testLogging.showStandardStreams = true
+    exclude '**'
+}
+
+task cucumberTest(type: JavaExec, dependsOn: [compileTestJava]) {
+    group 'Verification'
+    description 'Runs the cucumber tests.'
+
+    outputs.upToDateWhen { false }
+
+    classpath = sourceSets.test.runtimeClasspath
+
+    main = 'io.cucumber.core.cli.Main'
+
+    jvmArgs("-Djava.util.logging.config.file=${projectDir}/src/test/resources/logging.properties") 
+    
+    doFirst {
+    
+        def tags = System.getProperty("tags")
+        systemProperty 'io.omam.wire.testkit.tags', tags
+    
+        args = [
+            '--strict',
+            '--glue', 'io.omam.wire',
+            '--plugin', 'pretty',
+            '--plugin', 'json:' + "${buildDir}" + '/reports/cucumberTests/wire-tests.json',
+            '--tags', tags,
+            "${projectDir}/src/test/resources/io/"
+        ]
+    }
+
 }
 
 if (project.hasProperty('enableJaCoCo')) {
-    jacocoTestReport {
+    jacoco {
+        applyTo cucumberTest
+    }
+
+    task jacocoCucumberTestReport(type: JacocoReport) {
+        group 'Verification'
+        description 'Generates code coverage report for the cucumberTest task.'
+
+        outputs.upToDateWhen { false }
+
+        executionData(files("${buildDir}/jacoco/cucumberTest.exec"))
+
         reports {
-            xml.enabled true
-            html.enabled true
+            html.enabled = true
+            xml.enabled = true
         }
     }
 }
+
 
 if (Integer.valueOf(JavaVersion.current().getMajorVersion()) > 8) {
     // --release 8: configures the compiler to produce class files that will link against version 8
@@ -70,25 +103,8 @@ if (Integer.valueOf(JavaVersion.current().getMajorVersion()) > 8) {
 }
 
 compileJava.options.encoding = 'UTF-8'
-// See: https://docs.oracle.com/javase/9/tools/javac.htm#JSWOR627
 compileJava.options.compilerArgs += [
-    '-Xlint:cast',
-    '-Xlint:classfile',
-    '-Xlint:deprecation',
-    '-Xlint:dep-ann',
-    '-Xlint:divzero',
-    '-Xlint:empty',
-    '-Xlint:fallthrough',
-    '-Xlint:finally',
-    '-Xlint:overrides',
-    '-Xlint:path',
-    '-Xlint:processing',
-    '-Xlint:rawtypes',
-    '-Xlint:serial',
-    '-Xlint:static',
-    '-Xlint:unchecked',
-    '-Xlint:varargs',
-    '-Xlint:-options',
+    '-Xlint:all',
     '-Werror'
 ]
 
@@ -103,75 +119,115 @@ javadoc {
    options.memberLevel = JavadocMemberLevel.PROTECTED
 }
 
-/* Modify the Eclipse project settings. */
 eclipse { 
+    /* Modify the Eclipse project settings. */
     jdt { file { withProperties eclipsePrefs } } 
 
     classpath {
-        /* ignore optional problems in generated code. */
+        /* add proto source to eclipse classpath & ignore optional problems in generated code. */
         file {
-            whenMerged {
-                entries.each {
-                    source ->
-                    if (source.kind == 'src' && source.path.contains('generated')) {
-                        source.entryAttributes['ignore_optional_problems'] = 'true'
-                    }
-                }
+            whenMerged { classpath ->
+                // FIXME if already present do not add again (cleanEclipse)
+                def protoSrc = new SourceFolder('build/generated/source/proto/main/java', 'bin/main')
+                protoSrc.entryAttributes['ignore_optional_problems'] = 'true'
+                classpath.entries << protoSrc
             }
         }
     }
 }
 
-task ('copyEclipsePrefs', type: Copy) {
+task copyEclipsePrefs(type: Copy) {
     from rootProject.file('gradle/eclipse-prefs/org.eclipse.jdt.ui.prefs')
     into "${projectDir}/.settings"
 }
 tasks.eclipse.finalizedBy copyEclipsePrefs
 
-extraArchive {
-    sources = true
-    tests = true
-    javadoc = true
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
 }
 
-modifyPom {
-    project {
-        name 'wire'
-        description 'An implementation of the Google Cast V2 protocol in Java.'
-        url 'https://github.com/ofmooseandmen/wire'
-        inceptionYear '2018'
+task testSourcesJar(type: Jar) {
+    from sourceSets.test.allSource
+    classifier = 'test-sources'
+}
 
-        scm {
-            url 'https://github.com/ofmooseandmen/wire'
-            connection 'scm:https://ofmooseandmen@github.com/ofmooseandmen/wire.git'
-            developerConnection 'scm:git://github.com/ofmooseandmen/wire.git'
-        }
+task javadocJar(type: Jar) {
+    from javadoc
+    classifier = 'javadoc'
+}
 
-        licenses {
-            license {
-                name 'The 3-Clause BSD License'
-                url 'https://opensource.org/licenses/BSD-3-Clause'
-                distribution 'repo'
-            }
-        }
-
-        developers {
-            developer {
-                id 'ofmooseandmen'
-                name 'Cedric Liegeois'
-                email 'ofmooseandmen@yahoo.com'
+// Requirements:
+//
+// - Add the following properties to ~/.gradle/gradle.properties
+//     ossrhUsername=<username>
+//     ossrhPassword=<password>
+// - Or pass the credentials as command line parameters
+//     ./gradlew uploadArchives -PossrhUsername=<my-username> -PossrhPassword=<my-password>
+//
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+            artifact testSourcesJar
+            artifact javadocJar
+            pom {
+                name = project.name
+                description = 'An implementation of the Google Cast V2 protocol in Java.'
+                url = 'https://github.com/ofmooseandmen/wire'
+                inceptionYear = '2018'
+                licenses {
+                    license {
+                        name = 'The 3-Clause BSD License'
+                        url = 'https://opensource.org/licenses/BSD-3-Clause'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'ofmooseandmen'
+                        name = 'Cedric Liegeois'
+                        email = 'ofmooseandmen@yahoo.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:https://ofmooseandmen@github.com/ofmooseandmen/wire.git'
+                    developerConnection = 'scm:git://github.com/ofmooseandmen/wire.git'
+                    url = 'https://github.com/ofmooseandmen/wire'
+                }
             }
         }
     }
+
+    repositories {
+        mavenLocal()
+        maven {
+            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            def ossrhUsername = findProperty("ossrhUsername")
+            def ossrhPassword = findProperty("ossrhPassword")
+            url = version.endsWith('-SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username ossrhUsername
+                password ossrhPassword
+            }
+        }
+    }
+
 }
 
-nexus {
-    sign = true
-    repositoryUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
-    snapshotRepositoryUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
-}
-
-wrapper {
-    gradleVersion = '6.3'
-    distributionType = Wrapper.DistributionType.BIN
+// Requirements:
+//
+// - Get public key ID `gpg --list-keys --keyid-format SHORT`
+// - Export key `gpg --keyring secring.gpg --export-secret-keys > ~/.gnupg/secring.gpg`
+// - Add the following properties to ~/.gradle/gradle.properties
+//      signing.keyId=0ABCDEF
+//      signing.password=password
+//      signing.secretKeyRingFile=/absolute/path/to/.gnupg/secring.gpg
+//
+def isSnapshot = project.version.toString().endsWith("-SNAPSHOT")
+def isCiEnv = System.getenv("CI") ?: false
+signing {
+    required { !(isSnapshot || isCiEnv) }
+    sign publishing.publications.maven
 }

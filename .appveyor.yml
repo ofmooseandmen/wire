@@ -1,5 +1,0 @@
-image: Visual Studio 2019 Preview
-
-build_script:
-  - gradlew --no-daemon -version
-  - gradlew --stacktrace --warning-mode=all assemble test --tests io.omam.wire.WireEmulatedDeviceTestSuite

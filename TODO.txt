@@ -1,0 +1,10 @@
+
+
+emulated service:
+
+        service = Service
+            .create(NAME, REGISTRATION_TYPE, PORT)
+            .hostname("localhost")
+            .ipv4Address(ADDR)
+            .attributes(Attributes.create().with(FRIENDLY_NAME, NAME, StandardCharsets.UTF_8).get())
+            .get();

@@ -1,0 +1,24 @@
+name: JDKS
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  jdks:
+    strategy:
+      matrix:
+        jdk: [1.8, 14, 15-ea]
+      fail-fast: false
+    name: "OpenJDK ${{ matrix.jdk }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: "Set up JDK ${{ matrix.jdk }}"
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.jdk }}
+      - name: 'Build with Gradle'
+        run: ./gradlew --warning-mode=all -Dtags=@EmulatedDevice assemble cucumberTest

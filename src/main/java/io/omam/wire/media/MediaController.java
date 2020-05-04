@@ -30,16 +30,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire.media;
 
-import static io.omam.wire.CastV2Protocol.REQUEST_TIMEOUT;
+import static io.omam.wire.io.IoProperties.REQUEST_TIMEOUT;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import io.omam.wire.ApplicationController;
-import io.omam.wire.ApplicationData;
-import io.omam.wire.ApplicationWire;
+import io.omam.wire.app.ApplicationController;
+import io.omam.wire.app.ApplicationData;
+import io.omam.wire.app.ApplicationWire;
 
 /**
  * Default Media Receiver controller.
@@ -99,6 +99,33 @@ public interface MediaController extends ApplicationController {
      * @throws MediaRequestException if the request is rejected by the device
      */
     MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException;
+
+    /**
+     * Changes the behaviour of the queue when all items have been played.
+     *
+     * @param mode the repeat mode
+     * @return the current media status, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the default timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
+     */
+    default MediaStatus changeRepeatMode(final RepeatMode mode)
+            throws IOException, TimeoutException, MediaRequestException {
+        return changeRepeatMode(mode, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * Changes the behaviour of the queue when all items have been played.
+     *
+     * @param mode the repeat mode
+     * @param timeout response timeout
+     * @return the current media status, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
+     */
+    MediaStatus changeRepeatMode(final RepeatMode mode, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException;
 
     /**
@@ -369,33 +396,6 @@ public interface MediaController extends ApplicationController {
      * @throws MediaRequestException if the request is rejected by the device
      */
     MediaStatus seek(final Duration amount, final Duration timeout)
-            throws IOException, TimeoutException, MediaRequestException;
-
-    /**
-     * Sets the behaviour of the queue when all items have been played.
-     *
-     * @param mode the repeat mode
-     * @return the current media status, never null
-     * @throws IOException if the received response is an error or cannot be parsed
-     * @throws TimeoutException if the default timeout has elapsed before the response was received
-     * @throws MediaRequestException if the request is rejected by the device
-     */
-    default MediaStatus setRepeatMode(final RepeatMode mode)
-            throws IOException, TimeoutException, MediaRequestException {
-        return setRepeatMode(mode, REQUEST_TIMEOUT);
-    }
-
-    /**
-     * Sets the behaviour of the queue when all items have been played.
-     *
-     * @param mode the repeat mode
-     * @param timeout response timeout
-     * @return the current media status, never null
-     * @throws IOException if the received response is an error or cannot be parsed
-     * @throws TimeoutException if the timeout has elapsed before the response was received
-     * @throws MediaRequestException if the request is rejected by the device
-     */
-    MediaStatus setRepeatMode(final RepeatMode mode, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException;
 
     /**

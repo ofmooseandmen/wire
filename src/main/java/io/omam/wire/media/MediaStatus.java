@@ -33,8 +33,6 @@ package io.omam.wire.media;
 import java.util.List;
 import java.util.Optional;
 
-import io.omam.wire.Volume;
-
 /**
  * Represents the status of a media session.
  * <p>

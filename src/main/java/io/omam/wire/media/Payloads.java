@@ -36,8 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import io.omam.wire.Payload;
-import io.omam.wire.Volume;
+import io.omam.wire.io.json.Payload;
 
 /**
  * Payloads of requests send to the default media receiver application.

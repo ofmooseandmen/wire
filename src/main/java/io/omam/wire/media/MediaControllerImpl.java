@@ -30,6 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package io.omam.wire.media;
 
+import static io.omam.wire.io.json.Payloads.parse;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
@@ -44,11 +46,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import io.omam.wire.ApplicationData;
-import io.omam.wire.ApplicationWire;
-import io.omam.wire.CastChannel.CastMessage;
-import io.omam.wire.Payload;
-import io.omam.wire.StandardApplicationController;
+import io.omam.wire.app.ApplicationData;
+import io.omam.wire.app.ApplicationWire;
+import io.omam.wire.io.CastChannel.CastMessage;
+import io.omam.wire.io.json.Payload;
 import io.omam.wire.media.Payloads.ErrorData;
 import io.omam.wire.media.Payloads.GetStatus;
 import io.omam.wire.media.Payloads.Load;
@@ -81,7 +82,7 @@ import io.omam.wire.media.Payloads.Stop;
  * @see <a href="https://developers.google.com/cast/docs/reference/caf_receiver/cast.framework.messages">Google
  *      Cast Framework Messages</a>
  */
-final class MediaControllerImpl extends StandardApplicationController implements MediaController {
+final class MediaControllerImpl implements MediaController {
 
     /** media namespace. */
     private static final String NAMESPACE = "urn:x-cast:com.google.cast.media";
@@ -112,7 +113,6 @@ final class MediaControllerImpl extends StandardApplicationController implements
      * @param aWire application wire
      */
     public MediaControllerImpl(final ApplicationData someDetails, final ApplicationWire aWire) {
-        super(someDetails);
         details = someDetails;
         wire = aWire;
         listeners = new ConcurrentLinkedQueue<>();
@@ -145,6 +145,11 @@ final class MediaControllerImpl extends StandardApplicationController implements
     }
 
     @Override
+    public final ApplicationData details() {
+        return details;
+    }
+
+    @Override
     public final MediaStatus getMediaStatus(final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Requesting media status");
@@ -161,9 +166,9 @@ final class MediaControllerImpl extends StandardApplicationController implements
 
         throwIfError(resp);
 
-        final QueueItemIds queueItemIds = wire.parse(resp, QueueItemIds.TYPE, QueueItemIds.class);
+        final QueueItemIds queueItemIds = parse(resp, QueueItemIds.TYPE, QueueItemIds.class);
         resp = wire.request(NAMESPACE, destination, new QueueGetItems(mid, queueItemIds.itemIds()), timeout);
-        return wire.parse(resp, QueueItems.TYPE, QueueItems.class).items();
+        return parse(resp, QueueItems.TYPE, QueueItems.class).items();
     }
 
     @Override
@@ -227,7 +232,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     }
 
     @Override
-    public final MediaStatus setRepeatMode(final RepeatMode mode, final Duration timeout)
+    public final MediaStatus changeRepeatMode(final RepeatMode mode, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Setting playback repeat mode to " + mode);
         return request(id -> QueueUpdate.repeatMode(id, mode), timeout);
@@ -244,7 +249,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     }
 
     @Override
-    protected final void unsolicitedMessageReceived(final String type, final CastMessage message) {
+    public final void unsolicitedMessageReceived(final String type, final CastMessage message) {
         if (MediaStatusResponse.TYPE.equals(type)) {
             notifyMediaStatus(message);
         } else if (ErrorType.ERROR.name().equals(type)) {
@@ -260,7 +265,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
     private void notifyMediaError(final CastMessage message) {
         LOGGER.warning(() -> "Received media error");
         try {
-            final Error error = wire.parse(message, ErrorType.ERROR.name(), ErrorData.class);
+            final Error error = parse(message, ErrorType.ERROR.name(), ErrorData.class);
             LOGGER.warning(() -> "Received media error [" + message.getPayloadUtf8() + "]");
             listeners.forEach(l -> l.mediaErrorReceived(error));
         } catch (final IOException e) {
@@ -277,7 +282,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
         LOGGER.info(() -> "Received updated media status");
         try {
             final Optional<MediaStatusData> optStatus =
-                    wire.parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
+                    parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
             if (optStatus.isPresent()) {
                 final MediaStatus ms = optStatus.get();
                 LOGGER.fine(() -> "Received new media status [" + message.getPayloadUtf8() + "]");
@@ -330,7 +335,7 @@ final class MediaControllerImpl extends StandardApplicationController implements
         throwIfError(resp);
 
         final Optional<MediaStatusData> status =
-                wire.parse(resp, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
+                parse(resp, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
         return status.orElseThrow(() -> new IOException("Invalid response - no media status"));
     }
 
@@ -342,13 +347,13 @@ final class MediaControllerImpl extends StandardApplicationController implements
      * @throws MediaRequestException if message is an error
      */
     private void throwIfError(final CastMessage resp) throws IOException, MediaRequestException {
-        final Optional<String> opType = wire.parse(resp).type();
+        final Optional<String> opType = parse(resp).flatMap(Payload::type);
         if (!opType.isPresent()) {
             throw new IOException("Invalid response - unknown type");
         }
         final String type = opType.get();
         if (ERRORS.contains(type)) {
-            final Error error = wire.parse(resp, type, ErrorData.class);
+            final Error error = parse(resp, type, ErrorData.class);
             throw new MediaRequestException(error);
         }
     }
