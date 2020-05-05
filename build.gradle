@@ -86,6 +86,9 @@ if (project.hasProperty('enableJaCoCo')) {
         description 'Generates code coverage report for the cucumberTest task.'
 
         outputs.upToDateWhen { false }
+        
+        classDirectories.from(sourceSets.main.output.classesDirs)
+        sourceDirectories.from(sourceSets.main.java.srcDirs)
 
         executionData(files("${buildDir}/jacoco/cucumberTest.exec"))
 
@@ -163,7 +166,7 @@ task javadocJar(type: Jar) {
 //     ossrhUsername=<username>
 //     ossrhPassword=<password>
 // - Or pass the credentials as command line parameters
-//     ./gradlew uploadArchives -PossrhUsername=<my-username> -PossrhPassword=<my-password>
+//     ./gradlew publishXXXX -PossrhUsername=<my-username> -PossrhPassword=<my-password>
 //
 publishing {
     publications {
