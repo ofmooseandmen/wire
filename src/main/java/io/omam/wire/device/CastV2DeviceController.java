@@ -201,7 +201,11 @@ final class CastV2DeviceController implements CastDeviceController {
     @Override
     public final CastDeviceStatus stopApp(final ApplicationController app, final Duration timeout)
             throws IOException, TimeoutException {
-        LOGGER.info(() -> "Stopping application " + app.details().applicationId() + " on device " + deviceNameOrId());
+        LOGGER
+            .info(() -> "Stopping application "
+                + app.details().applicationId()
+                + " on device "
+                + deviceNameOrId());
         ensureConnected();
         final ChannelListener appListener = appListeners.remove(app);
         if (appListener == null) {

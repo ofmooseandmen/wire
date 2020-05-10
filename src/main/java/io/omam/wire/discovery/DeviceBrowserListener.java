@@ -42,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import io.omam.halo.Service;
+import io.omam.halo.ResolvedService;
 import io.omam.halo.ServiceBrowserListener;
 import io.omam.wire.device.CastDeviceController;
 
@@ -71,15 +71,7 @@ final class DeviceBrowserListener implements ServiceBrowserListener {
     }
 
     @Override
-    public final void serviceDown(final Service service) {
-        final CastDeviceController client = clients.remove(service.name().toLowerCase());
-        if (client != null) {
-            l.deviceDown(client);
-        }
-    }
-
-    @Override
-    public final void serviceUp(final Service service) {
+    public final void serviceAdded(final ResolvedService service) {
         final InetAddress address = service.ipv4Address().orElseGet(() -> service.ipv6Address().orElse(null));
         final String instanceName = service.instanceName();
         if (address == null) {
@@ -93,11 +85,24 @@ final class DeviceBrowserListener implements ServiceBrowserListener {
                 final InetSocketAddress socketAddress = new InetSocketAddress(address, port);
                 final CastDeviceController client = CastDeviceController.v2(instanceName, socketAddress, name);
                 clients.put(service.name().toLowerCase(), client);
-                l.deviceUp(client);
+                l.deviceDiscovered(client);
             } catch (final GeneralSecurityException e) {
                 LOGGER.log(Level.WARNING, e, () -> "Ignored Cast Device [" + instanceName + "]");
             }
         }
+    }
+
+    @Override
+    public final void serviceRemoved(final ResolvedService service) {
+        final CastDeviceController client = clients.remove(service.name().toLowerCase());
+        if (client != null) {
+            l.deviceRemoved(client);
+        }
+    }
+
+    @Override
+    public final void serviceUpdated(final ResolvedService service) {
+        // TODO Auto-generated method stub
     }
 
 }

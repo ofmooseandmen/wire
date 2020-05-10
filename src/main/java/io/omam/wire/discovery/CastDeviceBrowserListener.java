@@ -40,17 +40,18 @@ public interface CastDeviceBrowserListener {
     /**
      * Invoked when a previously discovered Cast device has become unavailable.
      *
-     * @param controller a client to connect and interact with Cast device
+     * @param controller a client given when the device fast {@link #deviceDiscovered(CastDeviceController)
+     *            discovered}
      */
-    void deviceDown(final CastDeviceController controller);
+    void deviceRemoved(final CastDeviceController controller);
 
     /**
      * Invoked when a Cast device has been discovered.
      * <p>
      * The given {@code device} can no longer be used to interact with the device.
      *
-     * @param controller the client used to connect and interact Cast device
+     * @param controller the client used to connect and interact with the discovered Cast device
      */
-    void deviceUp(final CastDeviceController controller);
+    void deviceDiscovered(final CastDeviceController controller);
 
 }

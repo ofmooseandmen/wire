@@ -41,7 +41,7 @@ import java.util.logging.Logger;
 
 import io.omam.halo.Browser;
 import io.omam.halo.Halo;
-import io.omam.halo.Service;
+import io.omam.halo.ResolvedService;
 import io.omam.halo.ServiceBrowserListener;
 
 /**
@@ -65,16 +65,21 @@ public final class WireTestKit {
         }
 
         @Override
-        public final void serviceDown(final Service service) {
-            // ignore.
-        }
-
-        @Override
-        public final void serviceUp(final Service service) {
+        public final void serviceAdded(final ResolvedService service) {
             final InetAddress address = service.ipv4Address().orElseGet(() -> service.ipv6Address().orElse(null));
             if (address != null) {
                 socketAddr = new InetSocketAddress(address, service.port());
             }
+        }
+
+        @Override
+        public final void serviceRemoved(final ResolvedService service) {
+            // ignore.
+        }
+
+        @Override
+        public final void serviceUpdated(final ResolvedService service) {
+            // ignore.
         }
 
         /**

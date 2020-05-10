@@ -1,7 +1,7 @@
 Feature: Interfacing with the receiver status
   
     Interrogating the receiver status is achieved through the "urn:x-cast:com.google.cast.receiver" namespace/protocol.
-
+  
     TODO: complete
 
   @EmulatedDevice @RealDevice
