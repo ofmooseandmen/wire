@@ -1,0 +1,6 @@
+dependencies {
+    implementation(
+        project(':wire-app'),
+        project(':wire-io')
+    )
+}

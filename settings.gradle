@@ -6,3 +6,5 @@ if (javaVersion < 8) {
 }
 
 rootProject.name = 'wire'
+
+include 'wire-app', 'wire-device', 'wire-discovery', 'wire-io', 'wire-media', 'wire-testkit'

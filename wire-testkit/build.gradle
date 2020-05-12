@@ -1,0 +1,10 @@
+dependencies {
+    implementation(
+        project(':wire-app'),
+        project(':wire-io'),
+        'com.github.ofmooseandmen:halo:2020.05',
+        'com.google.code.gson:gson:2.8.6',
+        'com.google.protobuf:protobuf-java:3.11.4',
+        'org.awaitility:awaitility:4.0.2'
+    )
+}

@@ -1,0 +1,6 @@
+dependencies {
+    implementation(
+        project(':wire-device'),
+        'com.github.ofmooseandmen:halo:2020.05'
+    )
+}

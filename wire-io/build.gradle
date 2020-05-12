@@ -1,0 +1,32 @@
+import org.gradle.plugins.ide.eclipse.model.SourceFolder
+
+plugins {
+    id 'com.google.protobuf' version '0.8.12'
+}
+
+dependencies {
+    implementation(
+        'com.google.protobuf:protobuf-java:3.11.4',
+        'com.google.code.gson:gson:2.8.6'
+    )
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.11.4'
+    }
+}
+
+eclipse { 
+    classpath {
+        /* add proto source to eclipse classpath & ignore optional problems in generated code. */
+        file {
+            whenMerged { classpath ->
+                // FIXME if already present do not add again (cleanEclipse)
+                def protoSrc = new SourceFolder('build/generated/source/proto/main/java', 'bin/main')
+                protoSrc.entryAttributes['ignore_optional_problems'] = 'true'
+                classpath.entries << protoSrc
+            }
+        }
+    }
+}
