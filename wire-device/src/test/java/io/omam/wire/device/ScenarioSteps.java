@@ -40,7 +40,7 @@ import io.cucumber.java.After;
 import io.cucumber.java.Before;
 
 /**
- * Steps to log start/end of scenario.
+ * Steps to handle start/end of scenario.
  */
 public final class ScenarioSteps {
 

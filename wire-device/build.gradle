@@ -16,3 +16,5 @@ dependencies {
         'org.awaitility:awaitility:4.0.2'
     )
 }
+
+cucumber.glue = 'io.omam.wire.device'

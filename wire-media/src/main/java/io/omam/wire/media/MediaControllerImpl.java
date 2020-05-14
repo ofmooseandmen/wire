@@ -266,13 +266,7 @@ final class MediaControllerImpl implements MediaController {
         LOGGER.warning(() -> "Received media error");
         try {
             final Error error = parse(message, ErrorType.ERROR.name(), ErrorData.class);
-            LOGGER
-                .warning(() -> "Received media error ["
-                    + error.errorType()
-                    + "("
-                    + error.errorReason()
-                    + ")"
-                    + "]");
+            LOGGER.warning(() -> "Received media error: " + error);
             listeners.forEach(l -> l.mediaErrorReceived(error));
         } catch (final IOException e) {
             LOGGER.log(Level.FINE, e, () -> "Could not parse received media error");

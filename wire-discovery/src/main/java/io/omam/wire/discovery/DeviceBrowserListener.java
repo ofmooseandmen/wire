@@ -102,7 +102,7 @@ final class DeviceBrowserListener implements ServiceBrowserListener {
 
     @Override
     public final void serviceUpdated(final ResolvedService service) {
-        // TODO Auto-generated method stub
+        // TODO: check what can be changed (maybe the friendly name)?
     }
 
 }

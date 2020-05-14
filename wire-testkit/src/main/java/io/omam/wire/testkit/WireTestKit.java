@@ -141,7 +141,7 @@ public final class WireTestKit {
      */
     public static boolean requiresEmulatedDevice() {
         final String tags = System.getProperty(TAGS_PROP_NAME);
-        return tags.contains("@EmulatedDevice");
+        return tags != null && tags.contains("@EmulatedDevice");
     }
 
     /**

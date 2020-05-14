@@ -92,6 +92,23 @@ final class Payloads {
         public final Optional<Integer> itemId() {
             return Optional.ofNullable(itemId);
         }
+
+        @Override
+        public final String toString() {
+            final StringBuilder sb = new StringBuilder();
+            sb.append(errorType());
+            if (reason != null) {
+                sb.append(" [" + reason + "]");
+            }
+            if (detailedErrorCode != null) {
+                sb.append(" (" + detailedErrorCode + ")");
+            }
+            if (itemId != null) {
+                sb.append(" for queue item " + itemId);
+            }
+            return sb.toString();
+        }
+
     }
 
     /**
