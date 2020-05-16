@@ -31,60 +31,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire.device;
 
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Facility to await for a condition to be satisfied.
  */
-final class Monitor {
-
-    /**
-     * A duration continuously decreasing until {@link Duration#ZERO}.
-     * <p>
-     * This class is helpful when awaiting for a {@code java.util.concurrent.locks.Condition} to be signaled.
-     */
-    private static class Timeout {
-
-        /** remaining duration. */
-        private final Duration duration;
-
-        /** when the timeout was created, milliseconds from the epoch of 1970-01-01T00:00Z. */
-        private final long start;
-
-        /**
-         * Class constructor.
-         *
-         * @param initialDuration initial duration, not null
-         */
-        Timeout(final Duration initialDuration) {
-            Objects.requireNonNull(initialDuration);
-            duration = initialDuration;
-            start = System.nanoTime();
-        }
-
-        /**
-         * Assess and returns the remaining duration or {@link Duration#ZERO} if the initial duration has elapsed.
-         *
-         * @return the remaining duration
-         */
-        final Duration remaining() {
-            final long elapsedNs = System.nanoTime() - start;
-            Duration remaining = duration.minus(elapsedNs, ChronoUnit.NANOS);
-            if (remaining.isNegative()) {
-                remaining = Duration.ZERO;
-            }
-            return remaining;
-        }
-
-    }
+abstract class Monitor {
 
     /** Logger. */
     private static final Logger LOGGER = Logger.getLogger(Monitor.class.getName());
@@ -95,19 +51,12 @@ final class Monitor {
     /** the condition. */
     private final Condition cdt;
 
-    /** a supplier that returns {@code true} only if condition being monitored is satisfied. */
-    private final Supplier<Boolean> cdtSatisfied;
-
     /**
      * Class constructor.
-     *
-     * @param conditionSatisfied a supplier that returns {@code true} only if condition being monitored is
-     *            satisfied
      */
-    Monitor(final Supplier<Boolean> conditionSatisfied) {
+    protected Monitor() {
         lock = new ReentrantLock();
         cdt = lock.newCondition();
-        cdtSatisfied = conditionSatisfied;
     }
 
     /**
@@ -117,38 +66,23 @@ final class Monitor {
      * @return {@code true} if condition is satisfied before timeout
      */
     final boolean await(final Duration timeout) {
+        long nanos = timeout.toNanos();
         lock.lock();
-        boolean success = false;
         try {
-            /*
-             * check if condition is already satisfied.
-             */
-            if (cdtSatisfied.get()) {
-                return true;
+            while (!isConditionSatisfied()) {
+                if (nanos <= 0L) {
+                    return false;
+                }
+                nanos = cdt.awaitNanos(nanos);
             }
-            final Timeout to = new Timeout(timeout);
-            Duration remaining = to.remaining();
-            do {
-                success = cdt.await(remaining.toMillis(), TimeUnit.MILLISECONDS);
-                remaining = to.remaining();
-            } while (!cdtSatisfied.get() && !remaining.isZero());
         } catch (final InterruptedException e) {
             LOGGER.log(Level.WARNING, "Interrupted while waiting for condition to be satisfied", e);
             Thread.currentThread().interrupt();
-            success = false;
+            return false;
         } finally {
             lock.unlock();
         }
-        return success;
-    }
-
-    /**
-     * Acquires the lock.
-     *
-     * @see Lock#lock()
-     */
-    final void lock() {
-        lock.lock();
+        return true;
     }
 
     /**
@@ -164,12 +98,8 @@ final class Monitor {
     }
 
     /**
-     * Releases the lock.
-     *
-     * @see Lock#unlock()
+     * @return {@true} if the condition waited for is satisfied.
      */
-    final void unlock() {
-        lock.unlock();
-    }
+    protected abstract boolean isConditionSatisfied();
 
 }

@@ -72,6 +72,7 @@ final class DeviceBrowserListener implements ServiceBrowserListener {
 
     @Override
     public final void serviceAdded(final ResolvedService service) {
+        // FIXME: avoid duplicate service, i.e. map.containsKey(service.name().toLowerCase())
         final InetAddress address = service.ipv4Address().orElseGet(() -> service.ipv6Address().orElse(null));
         final String instanceName = service.instanceName();
         if (address == null) {

@@ -146,7 +146,14 @@ final class Requestor<T> implements ChannelListener {
         correlator = aCorrelator;
         req = null;
         receivedResponse = false;
-        monitor = new Monitor(() -> receivedResponse);
+        monitor = new Monitor() {
+
+            @SuppressWarnings("synthetic-access")
+            @Override
+            protected final boolean isConditionSatisfied() {
+                return receivedResponse;
+            }
+        };
         response = null;
     }
 
@@ -172,16 +179,11 @@ final class Requestor<T> implements ChannelListener {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        monitor.lock();
-        try {
-            if (correlator.test(req, message)) {
-                LOGGER.fine(() -> "Received response [" + message + "] answering request");
-                receivedResponse = true;
-                response = message;
-                monitor.signalAll();
-            }
-        } finally {
-            monitor.unlock();
+        if (correlator.test(req, message)) {
+            LOGGER.fine(() -> "Received response [" + message + "] answering request");
+            receivedResponse = true;
+            response = message;
+            monitor.signalAll();
         }
     }
 
@@ -229,7 +231,6 @@ final class Requestor<T> implements ChannelListener {
      * @throws TimeoutException if the timeout has elapsed before a response was received
      */
     private CastMessage request(final CastMessage request, final Duration timeout) throws TimeoutException {
-        monitor.lock();
         try {
             channel.addListener(this, request.getNamespace());
             req = request;
@@ -239,10 +240,11 @@ final class Requestor<T> implements ChannelListener {
             monitor.await(timeout);
         } finally {
             channel.removeListener(this);
-            monitor.unlock();
         }
         if (response == null) {
-            throw new TimeoutException("No response received within " + timeout);
+            final String msg = "No response received within " + timeout;
+            LOGGER.info(msg);
+            throw new TimeoutException(msg);
         }
         return response;
     }

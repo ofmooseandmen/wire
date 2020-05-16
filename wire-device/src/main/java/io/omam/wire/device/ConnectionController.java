@@ -220,7 +220,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     private Future<?> fTimeout;
 
     /** connection state. */
-    private State state;
+    private volatile State state;
 
     /** monitors when connection has reached a final state. */
     private final Monitor monitor;
@@ -244,7 +244,14 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         fTimeout = null;
 
         state = State.CLOSED;
-        monitor = new Monitor(() -> state == State.OPENED);
+        monitor = new Monitor() {
+
+            @SuppressWarnings("synthetic-access")
+            @Override
+            protected final boolean isConditionSatisfied() {
+                return state == State.OPENED;
+            }
+        };
 
         listeners = new ConcurrentLinkedQueue<>();
 
@@ -273,24 +280,19 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        monitor.lock();
-        try {
-            if (hasType(message, "PONG")) {
-                if (fTimeout != null) {
-                    fTimeout.cancel(true);
-                    fTimeout = null;
-                }
-                final boolean connecting = state == State.CONNECTING;
-                state = State.OPENED;
-                if (connecting) {
-                    LOGGER.info(() -> "Connection with device opened");
-                    monitor.signalAll();
-                }
-            } else if (hasType(message, "PING")) {
-                channel.send(pong(message.getSourceId()));
+        if (hasType(message, "PONG")) {
+            if (fTimeout != null) {
+                fTimeout.cancel(true);
+                fTimeout = null;
             }
-        } finally {
-            monitor.unlock();
+            final boolean connecting = state == State.CONNECTING;
+            state = State.OPENED;
+            if (connecting) {
+                LOGGER.info(() -> "Connection with device opened");
+                monitor.signalAll();
+            }
+        } else if (hasType(message, "PING")) {
+            channel.send(pong(message.getSourceId()));
         }
     }
 
@@ -335,27 +337,22 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
                 throw new IOException(e);
             }
 
-            monitor.lock();
-            try {
-                channel.addListener(this, CONNECTION_NS);
-                channel.addListener(this, HEARTBEAT_NS);
-                LOGGER.info(() -> "Received authentication response, connecting...");
-                /* OK to connect. */
-                /* ping the device. */
-                channel.send(PING_MSG);
+            channel.addListener(this, CONNECTION_NS);
+            channel.addListener(this, HEARTBEAT_NS);
+            LOGGER.info(() -> "Received authentication response, connecting...");
+            /* OK to connect. */
+            /* ping the device. */
+            channel.send(PING_MSG);
 
-                /* send connection message. */
-                channel.send(CONNECT_MSG);
+            /* send connection message. */
+            channel.send(CONNECT_MSG);
 
-                /* start heartbeat. */
-                fPing = ses
-                    .scheduleAtFixedRate(this::sendPing, PING_INTERVAL.toMillis(), PING_INTERVAL.toMillis(),
-                            TimeUnit.MILLISECONDS);
-                final Duration connectionTimeout = timeout.minus(System.nanoTime() - start, ChronoUnit.NANOS);
-                monitor.await(connectionTimeout);
-            } finally {
-                monitor.unlock();
-            }
+            /* start heartbeat. */
+            fPing = ses
+                .scheduleAtFixedRate(this::sendPing, PING_INTERVAL.toMillis(), PING_INTERVAL.toMillis(),
+                        TimeUnit.MILLISECONDS);
+            final Duration connectionTimeout = timeout.minus(System.nanoTime() - start, ChronoUnit.NANOS);
+            monitor.await(connectionTimeout);
         }
         final boolean opened = isOpened();
         LOGGER.info(() -> "Connection opened? " + opened);

@@ -46,9 +46,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -141,20 +139,20 @@ final class CastV2Channel {
      * <p>
      * Listeners will be notified of the received message.
      */
-    private final class Receiver implements Runnable {
+    private final class Receiver extends Thread {
 
         /**
          * Constructor.
          */
         Receiver() {
-            // empty.
+            super("wire-channel-receiver");
         }
 
-        @SuppressWarnings("synthetic-access")
+        @SuppressWarnings({ "synthetic-access", "resource" })
         @Override
         public final void run() {
             boolean endOfStream = false;
-            while (!endOfStream && !Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted() && !endOfStream) {
                 try {
                     final InputStream is = socket.getInputStream();
                     /* 4 first bytes is size of message. */
@@ -162,14 +160,14 @@ final class CastV2Channel {
                     if (optMsg.isPresent()) {
                         final CastMessage msg = optMsg.get();
                         LOGGER.fine(() -> "Received message [" + msg + "]");
-                        listeners.forEach(l -> l.messageReceived(msg));
+                        notifyMessageReceived(msg);
                     } else {
                         endOfStream = true;
                     }
                 } catch (final SSLException | SocketException e) {
                     LOGGER.log(level(e), "Socket closed", e);
-                    listeners.forEach(ChannelListener::socketError);
-                    break;
+                    notifiySocketError();
+                    endOfStream = true;
                 } catch (final IOException e) {
                     LOGGER.log(Level.WARNING, "I/O error while receiving message", e);
                 }
@@ -183,26 +181,27 @@ final class CastV2Channel {
      * <p>
      * Messages are taken from the sending queue.
      */
-    private final class Sender implements Runnable {
+    private final class Sender extends Thread {
 
         /**
          * Constructor.
          */
         Sender() {
-            // empty.
+            super("wire-channel-sender");
         }
 
         @SuppressWarnings("synthetic-access")
         @Override
         public final void run() {
-            while (!Thread.currentThread().isInterrupted()) {
+            boolean error = false;
+            while (!Thread.currentThread().isInterrupted() && !error) {
                 try {
                     final CastMessage msg = sq.take();
                     doSend(msg);
                 } catch (final SSLException | SocketException e) {
                     LOGGER.log(level(e), "Socket closed", e);
                     listeners.forEach(ChannelListener::socketError);
-                    break;
+                    error = true;
                 } catch (final IOException e) {
                     LOGGER.log(Level.WARNING, "I/O error while sending message", e);
                 } catch (final InterruptedException e) {
@@ -217,6 +216,9 @@ final class CastV2Channel {
     /** logger. */
     private static final Logger LOGGER = Logger.getLogger(CastV2Channel.class.getName());
 
+    /** how long to wait for the receiver/sender thread to die. */
+    private static final long JOIN_WAIT = 1000L;
+
     /** device socket address. */
     private final InetSocketAddress ias;
 
@@ -226,20 +228,20 @@ final class CastV2Channel {
     /** TLS socket. */
     private Socket socket;
 
-    /** executor service to send/receive messages. */
-    private ExecutorService es;
-
     /** received message listeners. */
     private final ConcurrentLinkedQueue<ByNamespaceListener> listeners;
 
-    /** future to cancel receiving messages. */
-    private Future<?> receiver;
+    /** thread receiving messages. */
+    private Receiver receiver;
 
-    /** future to cancel sending messages. */
-    private Future<?> sender;
+    /** thread sending messages. */
+    private Sender sender;
 
     /** queue of messages to be sent. */
     private final BlockingQueue<CastMessage> sq;
+
+    /** executor to notify listener. */
+    private final ExecutorService executor;
 
     /**
      * Constructor.
@@ -251,11 +253,11 @@ final class CastV2Channel {
         ias = address;
         sc = sslContext;
         socket = null;
-        es = null;
         listeners = new ConcurrentLinkedQueue<>();
         receiver = null;
         sender = null;
         sq = new LinkedBlockingQueue<>();
+        executor = Executors.newSingleThreadExecutor(new WireThreadFactory("channel-notifier"));
     }
 
     /**
@@ -305,7 +307,7 @@ final class CastV2Channel {
     }
 
     /**
-     * Closes this channel, subsquent {@link #connect()} is possible.
+     * Closes this channel, subsequent {@link #connect()} is possible.
      */
     final synchronized void close() {
         LOGGER.fine("Closing channel");
@@ -314,7 +316,7 @@ final class CastV2Channel {
     }
 
     /**
-     * Closes this channel by first sending the given message.
+     * Closes this channel by first sending the given message. Subsequent {@link #connect()} is possible.
      *
      * @param msg the message to send before closing the channel
      */
@@ -339,9 +341,10 @@ final class CastV2Channel {
             LOGGER.fine(() -> "Connecting to " + ias);
             socket = createSocket();
             socket.connect(ias);
-            es = Executors.newScheduledThreadPool(2, new WireThreadFactory("channel"));
-            sender = es.submit(new Sender());
-            receiver = es.submit(new Receiver());
+            sender = new Sender();
+            receiver = new Receiver();
+            receiver.start();
+            sender.start();
         }
     }
 
@@ -365,7 +368,7 @@ final class CastV2Channel {
     }
 
     /**
-     * Closes the socket and await for the termination of the background tasks
+     * Closes the socket.
      */
     private void closeSocket() {
         try {
@@ -375,18 +378,6 @@ final class CastV2Channel {
         } finally {
             socket = null;
         }
-
-        es.shutdownNow();
-        try {
-            if (!es.awaitTermination(1, TimeUnit.SECONDS)) {
-                LOGGER.warning(() -> "Channel tasks not completed after shutdown");
-            }
-        } catch (final InterruptedException e) {
-            LOGGER.log(Level.WARNING, "Interrupted while waiting for scheduler termination", e);
-            Thread.currentThread().interrupt();
-        }
-        es = null;
-
     }
 
     /**
@@ -399,6 +390,7 @@ final class CastV2Channel {
      * @return the created socket
      * @throws IOException in case of I/O error
      */
+    @SuppressWarnings("resource")
     private Socket createSocket() throws IOException {
         return USE_TLS ? sc.getSocketFactory().createSocket() : new Socket();
     }
@@ -409,26 +401,51 @@ final class CastV2Channel {
      * @param message message to send
      * @throws IOException in case of I/O error
      */
+    @SuppressWarnings("resource")
     private void doSend(final CastMessage message) throws IOException {
-        LOGGER.fine(() -> "Sending message [" + message + "]");
         CastMessageCodec.write(message, socket.getOutputStream());
         LOGGER.fine(() -> "Sent message [" + message + "]");
     }
 
     /**
-     * Cancels background sender and receiver and shutdown executor.
+     * Notifies each listeners about a socket error.
+     */
+    private void notifiySocketError() {
+        executor.submit(() -> listeners.forEach(ChannelListener::socketError));
+    }
+
+    /**
+     * Notifies each listeners about a received message.
+     *
+     * @param msg the received message
+     */
+    private void notifyMessageReceived(final CastMessage msg) {
+        executor.submit(() -> listeners.forEach(l -> l.messageReceived(msg)));
+    }
+
+    /**
+     * Interrupt sender and receiver.
      */
     private void shutdown() {
-        sq.clear();
         if (sender != null) {
-            sender.cancel(true);
-            sender = null;
+            sender.interrupt();
+            try {
+                sender.join(JOIN_WAIT);
+            } catch (final InterruptedException e) {
+                LOGGER.log(Level.FINE, "Interrupted while waiting for receiver thread to die", e);
+                Thread.currentThread().interrupt();
+            }
         }
         if (receiver != null) {
-            receiver.cancel(true);
-            receiver = null;
+            receiver.interrupt();
+            try {
+                receiver.join(JOIN_WAIT);
+            } catch (final InterruptedException e) {
+                LOGGER.log(Level.FINE, "Interrupted while waiting for receiver thread to die", e);
+                Thread.currentThread().interrupt();
+            }
         }
-        es.shutdown();
+        sq.clear();
     }
 
 }
