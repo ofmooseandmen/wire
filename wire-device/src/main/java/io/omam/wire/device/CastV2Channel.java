@@ -383,8 +383,6 @@ final class CastV2Channel {
         if (receiver != null) {
             receiver.close();
         }
-        sendingQueue.clear();
-        receivingQueue.clear();
         if (msg != null) {
             try {
                 doSend(msg);
@@ -397,6 +395,8 @@ final class CastV2Channel {
         } catch (final IOException e) {
             LOGGER.log(Level.WARNING, "I/O error when closing socket", e);
         } finally {
+            sendingQueue.clear();
+            receivingQueue.clear();
             connected = false;
         }
     }
@@ -414,8 +414,13 @@ final class CastV2Channel {
             notifier = new Notifier();
             sender = new Sender();
             receiver = new Receiver();
+
+            receivingQueue.clear();
             receiver.start();
+
+            sendingQueue.clear();
             sender.start();
+
             notifier.start();
             connected = true;
         }
