@@ -32,7 +32,10 @@ package io.omam.wire.device;
 
 import static io.omam.wire.io.json.Payloads.parse;
 
+import java.io.IOException;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import io.omam.wire.app.ApplicationController;
 import io.omam.wire.io.CastChannel.CastMessage;
@@ -42,6 +45,9 @@ import io.omam.wire.io.json.Payload;
  * {@link ChannelListener} for {@link ApplicationController}.
  */
 final class ApplicationListener implements ChannelListener {
+
+    /** logger. */
+    private static final Logger LOGGER = Logger.getLogger(ApplicationListener.class.getName());
 
     /** application controller. */
     private final ApplicationController controller;
@@ -57,19 +63,19 @@ final class ApplicationListener implements ChannelListener {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        final Optional<Payload> optPayload = parse(message);
-        if (!optPayload.isPresent()) {
-            return;
+        try {
+            final Payload payload = parse(message);
+            if (payload.requestId().isPresent()) {
+                return;
+            }
+            final Optional<String> optType = payload.type();
+            if (!optType.isPresent()) {
+                return;
+            }
+            controller.unsolicitedMessageReceived(optType.get(), message);
+        } catch (final IOException e) {
+            LOGGER.log(Level.WARNING, "Could not parse received message", e);
         }
-        final Payload payload = optPayload.get();
-        if (payload.requestId().isPresent()) {
-            return;
-        }
-        final Optional<String> optType = payload.type();
-        if (!optType.isPresent()) {
-            return;
-        }
-        controller.unsolicitedMessageReceived(optType.get(), message);
     }
 
     @Override

@@ -34,9 +34,9 @@ import static io.omam.wire.device.ScenarioRuntime.rt;
 import static io.omam.wire.io.json.Payloads.parse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
@@ -50,9 +50,6 @@ import io.omam.wire.io.json.Payload;
  */
 @SuppressWarnings("javadoc")
 public final class EmulatedCastDeviceSteps {
-
-    private static final Supplier<AssertionError> UNPARSABLE =
-            () -> new AssertionError("Received unparsable message");
 
     private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
@@ -79,8 +76,12 @@ public final class EmulatedCastDeviceSteps {
                 .orElseThrow(() -> new AssertionError("Message " + expected + " was not received"));
             assertEquals(msg.getNamespace(), expected.namespace());
             if (!expected.type().equals("AUTH")) {
-                final Payload parsed = parse(msg).orElseThrow(UNPARSABLE);
-                assertEquals(parsed.type(), Optional.of(expected.type()));
+                try {
+                    final Payload parsed = parse(msg);
+                    assertEquals(parsed.type(), Optional.of(expected.type()));
+                } catch (final IOException e) {
+                    throw new AssertionError("Received unparsable message", e);
+                }
             }
         });
     }

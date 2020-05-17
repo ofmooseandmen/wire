@@ -480,13 +480,13 @@ final class ReceiverController implements ChannelListener {
      *
      * @param message message
      * @return {@code true} if unsolicited message of the given type, {@code false} otherwise
+     * @throws IOException if message cannot be parsed
      */
-    private static boolean isUnsolicitedReceiverStatus(final CastMessage message) {
-        return parse(message)
-            .map(s -> s.type().isPresent()
-                && s.type().get().equals(ReceiverStatus.TYPE)
-                && !s.requestId().isPresent())
-            .orElse(false);
+    private static boolean isUnsolicitedReceiverStatus(final CastMessage message) throws IOException {
+        final Payload parsed = parse(message);
+        return !parsed.requestId().isPresent()
+            && parsed.type().isPresent()
+            && parsed.type().get().equals(ReceiverStatus.TYPE);
     }
 
     /**
@@ -502,15 +502,15 @@ final class ReceiverController implements ChannelListener {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        if (isUnsolicitedReceiverStatus(message)) {
-            try {
+        try {
+            if (isUnsolicitedReceiverStatus(message)) {
                 final ReceiverStatus rs = parseReceiverStatus(message);
                 LOGGER.info(() -> "Received updated device status ");
                 LOGGER.fine(() -> "Received updated device status [" + message.getPayloadUtf8() + "]");
                 listeners.forEach(l -> l.deviceStatusUpdated(rs));
-            } catch (final IOException e) {
-                LOGGER.log(Level.FINE, e, () -> "Could not parse received receiver status");
             }
+        } catch (final IOException e) {
+            LOGGER.log(Level.FINE, e, () -> "Could not parse received receiver status");
         }
     }
 

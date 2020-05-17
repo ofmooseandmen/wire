@@ -636,9 +636,8 @@ public final class EmulatedCastDevice implements AutoCloseable {
                 } else if (isCloseConnection(message)) {
                     break;
                 } else {
-                    final String type = parse(message)
-                        .map(m -> m.responseType().orElseGet(() -> m.type().orElse(null)))
-                        .orElseThrow(IOException::new);
+                    final Payload parsed = parse(message);
+                    final String type = parsed.responseType().orElseGet(() -> parsed.type().orElse(null));
                     handlers.getOrDefault(type, t -> {
                         // empty, no specific processing.
                     }).accept(message);
@@ -727,7 +726,7 @@ public final class EmulatedCastDevice implements AutoCloseable {
         final JsonElement elt = GSON.fromJson(response.getPayloadUtf8(), JsonElement.class);
         final JsonObject obj = elt.getAsJsonObject();
         obj.remove(REQUEST_ID);
-        final int reqId = parse(request).flatMap(Payload::requestId).orElseThrow(AssertionError::new);
+        final int reqId = parse(request).requestId().orElseThrow(AssertionError::new);
         obj.addProperty(REQUEST_ID, reqId);
         send(CastMessage.newBuilder(response).clearPayloadUtf8().setPayloadUtf8(GSON.toJson(elt)).build());
     }

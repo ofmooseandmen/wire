@@ -304,7 +304,7 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     @Override
     public final void socketError() {
         LOGGER.info("Closing connection after socket error");
-        close(CastV2Channel::close, ConnectionListener::remoteConnectionClosed);
+        close(c -> c.close(null), ConnectionListener::remoteConnectionClosed);
     }
 
     /**

@@ -34,10 +34,7 @@ import static io.omam.wire.io.IoProperties.SENDER_ID;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -56,9 +53,6 @@ public final class Payloads {
 
     /** Gson instance. */
     private static final Gson GSON = new Gson();
-
-    /** logger. */
-    private static final Logger LOGGER = Logger.getLogger(Payloads.class.getName());
 
     /**
      * Constructor.
@@ -117,24 +111,22 @@ public final class Payloads {
     }
 
     /**
-     * Obtains an instance of {@code Payload.Any} from the payload of the given message.
+     * Obtains an instance of {@code Payload} from the payload of the given message.
      *
      * @param msg message
-     * @return the parsed {@code Payload.Any} or empty
+     * @return the parsed payload
+     * @throws IOException if the payload cannot be parsed
      */
-    // FIXME: throw IOException or change other parse
-    public static Optional<Payload> parse(final CastMessage msg) {
+    public static Payload parse(final CastMessage msg) throws IOException {
         Objects.requireNonNull(msg);
         final String payload = msg.getPayloadUtf8();
         if (payload == null || payload.isEmpty()) {
-            LOGGER.warning(() -> "Could not parse null or empty payload");
-            return Optional.empty();
+            throw new IOException("Could not parse null or empty payload");
         }
         try {
-            return Optional.of(GSON.fromJson(payload, AnyPayload.class));
+            return GSON.fromJson(payload, AnyPayload.class);
         } catch (final JsonSyntaxException | ClassCastException | IllegalArgumentException e) {
-            LOGGER.log(Level.WARNING, e, () -> "Could not parse [" + payload + "]");
-            return Optional.empty();
+            throw new IOException("Could not parse [" + payload + "]", e);
         }
     }
 
@@ -164,7 +156,6 @@ public final class Payloads {
             final AnyPayload parsedType = GSON.fromJson(payload, AnyPayload.class);
             final String actualType = parsedType.responseType().orElseGet(() -> parsedType.type().orElse(null));
             if (!type.equals(actualType)) {
-                LOGGER.warning(() -> "Unexpected payload: " + msg.getPayloadUtf8());
                 throw new IOException("Error: " + actualType + "; expected: " + type);
             }
 

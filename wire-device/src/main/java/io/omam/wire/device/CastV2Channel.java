@@ -335,7 +335,7 @@ final class CastV2Channel {
 
     /**
      * Interrupt given thread and wait for it to die.
-     * 
+     *
      * @param thread thread to interrupt
      */
     private static void terminate(final Thread thread) {
@@ -371,16 +371,10 @@ final class CastV2Channel {
     }
 
     /**
-     * Closes this channel, subsequent {@link #connect()} is possible.
-     */
-    final synchronized void close() {
-        close(null);
-    }
-
-    /**
-     * Closes this channel by first sending the given message. Subsequent {@link #connect()} is possible.
+     * Closes this channel by first sending the given message if not null. Subsequent {@link #connect()} is
+     * possible.
      *
-     * @param msg the message to send before closing the channel
+     * @param msg the message to send before closing the channel of null if not message to send.
      */
     final synchronized void close(final CastMessage msg) {
         LOGGER.fine("Closing channel");

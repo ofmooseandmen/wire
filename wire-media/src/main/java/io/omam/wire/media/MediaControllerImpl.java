@@ -346,7 +346,7 @@ final class MediaControllerImpl implements MediaController {
      * @throws MediaRequestException if message is an error
      */
     private void throwIfError(final CastMessage resp) throws IOException, MediaRequestException {
-        final Optional<String> opType = parse(resp).flatMap(Payload::type);
+        final Optional<String> opType = parse(resp).type();
         if (!opType.isPresent()) {
             throw new IOException("Invalid response - unknown type");
         }

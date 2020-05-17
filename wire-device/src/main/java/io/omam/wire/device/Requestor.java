@@ -34,8 +34,8 @@ import static io.omam.wire.io.IoProperties.DEFAULT_RECEIVER_ID;
 import static io.omam.wire.io.IoProperties.SENDER_ID;
 import static io.omam.wire.io.json.Payloads.parse;
 
+import java.io.IOException;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -85,12 +85,14 @@ final class Requestor<T> implements ChannelListener {
 
     /** standard request/response correlation predicate. */
     private static final BiPredicate<CastMessage, CastMessage> STD_CORRELATOR = (req, resp) -> {
-        final Optional<Payload> pReq = parse(req);
-        final Optional<Payload> pResp = parse(resp);
-        if (pReq.isPresent() && pResp.isPresent()) {
-            return pReq.get().requestId().isPresent() && pReq.get().requestId().equals(pResp.get().requestId());
+        try {
+            final Payload pReq = parse(req);
+            final Payload pResp = parse(resp);
+            return pResp.requestId().isPresent() && pReq.requestId().equals(pResp.requestId());
+        } catch (final IOException e) {
+            LOGGER.log(Level.WARNING, "Could not parse request or response", e);
+            return false;
         }
-        return false;
     };
 
     /** always true. */
