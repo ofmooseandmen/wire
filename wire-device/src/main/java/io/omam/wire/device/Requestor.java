@@ -37,7 +37,11 @@ import static io.omam.wire.io.json.Payloads.parse;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiPredicate;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.protobuf.MessageLite;
@@ -120,11 +124,11 @@ final class Requestor<T> implements ChannelListener {
     /** the transmitted request. */
     private CastMessage req;
 
-    /** whether a response has been received for the transmitted request. */
-    private volatile boolean receivedResponse;
+    /** lock. */
+    private final Lock lock;
 
-    /** monitors when request has been responded. */
-    private final Monitor monitor;
+    /** condition signaled when a response is received. */
+    private final Condition responseReceived;
 
     /**
      * last received response, null if no request has been transmitted, no response has been received.
@@ -145,15 +149,8 @@ final class Requestor<T> implements ChannelListener {
         builder = aBuilder;
         correlator = aCorrelator;
         req = null;
-        receivedResponse = false;
-        monitor = new Monitor() {
-
-            @SuppressWarnings("synthetic-access")
-            @Override
-            protected final boolean isConditionSatisfied() {
-                return receivedResponse;
-            }
-        };
+        lock = new ReentrantLock();
+        responseReceived = lock.newCondition();
         response = null;
     }
 
@@ -179,11 +176,15 @@ final class Requestor<T> implements ChannelListener {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        if (correlator.test(req, message)) {
-            LOGGER.fine(() -> "Received response [" + message + "] answering request");
-            receivedResponse = true;
-            response = message;
-            monitor.signalAll();
+        lock.lock();
+        try {
+            if (correlator.test(req, message)) {
+                LOGGER.fine(() -> "Received response [" + message + "] answering request");
+                response = message;
+                responseReceived.signalAll();
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -223,6 +224,29 @@ final class Requestor<T> implements ChannelListener {
     }
 
     /**
+     * Await until a response to the request is received or the given timeout has elapsed which ever occurs first.
+     *
+     * @param timeout how long to wait before giving up
+     */
+    private void awaitResponse(final Duration timeout) {
+        long nanos = timeout.toNanos();
+        lock.lock();
+        try {
+            while (response == null) {
+                if (nanos <= 0L) {
+                    return;
+                }
+                nanos = responseReceived.awaitNanos(nanos);
+            }
+        } catch (final InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Interrupted while waiting for response", e);
+            Thread.currentThread().interrupt();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
      * Transmits the given request and returns the received response.
      *
      * @param request the request to transmit
@@ -234,10 +258,9 @@ final class Requestor<T> implements ChannelListener {
         try {
             channel.addListener(this, request.getNamespace());
             req = request;
-            receivedResponse = false;
             response = null;
             channel.send(request);
-            monitor.await(timeout);
+            awaitResponse(timeout);
         } finally {
             channel.removeListener(this);
         }

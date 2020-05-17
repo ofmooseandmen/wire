@@ -47,6 +47,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -222,8 +225,11 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     /** connection state. */
     private volatile State state;
 
-    /** monitors when connection has reached a final state. */
-    private final Monitor monitor;
+    /** lock. */
+    private final Lock lock;
+
+    /** condition signaled when the connection is opened. */
+    private final Condition connectionOpened;
 
     /** listeners. */
     private final ConcurrentLinkedQueue<ConnectionListener> listeners;
@@ -244,14 +250,8 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         fTimeout = null;
 
         state = State.CLOSED;
-        monitor = new Monitor() {
-
-            @SuppressWarnings("synthetic-access")
-            @Override
-            protected final boolean isConditionSatisfied() {
-                return state == State.OPENED;
-            }
-        };
+        lock = new ReentrantLock();
+        connectionOpened = lock.newCondition();
 
         listeners = new ConcurrentLinkedQueue<>();
 
@@ -280,19 +280,24 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
 
     @Override
     public final void messageReceived(final CastMessage message) {
-        if (hasType(message, "PONG")) {
-            if (fTimeout != null) {
-                fTimeout.cancel(true);
-                fTimeout = null;
+        lock.lock();
+        try {
+            if (hasType(message, "PONG")) {
+                if (fTimeout != null) {
+                    fTimeout.cancel(true);
+                    fTimeout = null;
+                }
+                final boolean connecting = state == State.CONNECTING;
+                state = State.OPENED;
+                if (connecting) {
+                    LOGGER.info(() -> "Connection with device opened");
+                    connectionOpened.signalAll();
+                }
+            } else if (hasType(message, "PING")) {
+                channel.send(pong(message.getSourceId()));
             }
-            final boolean connecting = state == State.CONNECTING;
-            state = State.OPENED;
-            if (connecting) {
-                LOGGER.info(() -> "Connection with device opened");
-                monitor.signalAll();
-            }
-        } else if (hasType(message, "PING")) {
-            channel.send(pong(message.getSourceId()));
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -337,22 +342,27 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
                 throw new IOException(e);
             }
 
-            channel.addListener(this, CONNECTION_NS);
-            channel.addListener(this, HEARTBEAT_NS);
-            LOGGER.info(() -> "Received authentication response, connecting...");
-            /* OK to connect. */
-            /* ping the device. */
-            channel.send(PING_MSG);
+            lock.lock();
+            try {
+                channel.addListener(this, CONNECTION_NS);
+                channel.addListener(this, HEARTBEAT_NS);
+                LOGGER.info(() -> "Received authentication response, connecting...");
+                /* OK to connect. */
+                /* ping the device. */
+                channel.send(PING_MSG);
 
-            /* send connection message. */
-            channel.send(CONNECT_MSG);
+                /* send connection message. */
+                channel.send(CONNECT_MSG);
 
-            /* start heartbeat. */
-            fPing = ses
-                .scheduleAtFixedRate(this::sendPing, PING_INTERVAL.toMillis(), PING_INTERVAL.toMillis(),
-                        TimeUnit.MILLISECONDS);
-            final Duration connectionTimeout = timeout.minus(System.nanoTime() - start, ChronoUnit.NANOS);
-            monitor.await(connectionTimeout);
+                /* start heartbeat. */
+                fPing = ses
+                    .scheduleAtFixedRate(this::sendPing, PING_INTERVAL.toMillis(), PING_INTERVAL.toMillis(),
+                            TimeUnit.MILLISECONDS);
+                final Duration connectionTimeout = timeout.minus(System.nanoTime() - start, ChronoUnit.NANOS);
+                awaitOpen(connectionTimeout);
+            } finally {
+                lock.unlock();
+            }
         }
         final boolean opened = isOpened();
         LOGGER.info(() -> "Connection opened? " + opened);
@@ -403,6 +413,29 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
      */
     final void removeListener(final ConnectionListener listener) {
         listeners.remove(listener);
+    }
+
+    /**
+     * Await until the connection is opened or the given timeout has elapsed which ever occurs first.
+     *
+     * @param timeout how long to wait before giving up
+     */
+    private void awaitOpen(final Duration timeout) {
+        long nanos = timeout.toNanos();
+        lock.lock();
+        try {
+            while (state != State.OPENED) {
+                if (nanos <= 0L) {
+                    return;
+                }
+                nanos = connectionOpened.awaitNanos(nanos);
+            }
+        } catch (final InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Interrupted while waiting for connection to be opened", e);
+            Thread.currentThread().interrupt();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**

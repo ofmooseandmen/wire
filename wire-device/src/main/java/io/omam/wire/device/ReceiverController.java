@@ -538,11 +538,25 @@ final class ReceiverController implements ChannelListener {
      * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
      *             received
      */
-    final AppAvailabilities appAvailability(final Collection<String> appIds, final Duration timeout)
+    final AppAvailabilities getAppAvailability(final Collection<String> appIds, final Duration timeout)
             throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, new AppAvailabilityReq(appIds), timeout);
         return parse(resp, AppAvailabilityResp.TYPE, AppAvailabilityResp.class);
+    }
+
+    /**
+     * Requests and returns the status of the Cast device.
+     *
+     * @param timeout status timeout
+     * @return the status of the Cast device, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the status was received
+     */
+    final CastDeviceStatus getReceiverStatus(final Duration timeout) throws IOException, TimeoutException {
+        final CastMessage resp =
+                Requestor.stringPayload(channel).request(RECEIVER_NS, GetStatus.INSTANCE, timeout);
+        return parseReceiverStatus(resp);
     }
 
     /**
@@ -571,20 +585,6 @@ final class ReceiverController implements ChannelListener {
     final CastDeviceStatus mute(final Duration timeout) throws IOException, TimeoutException {
         final CastMessage resp =
                 Requestor.stringPayload(channel).request(RECEIVER_NS, new SetVolumeMuted(true), timeout);
-        return parseReceiverStatus(resp);
-    }
-
-    /**
-     * Requests and returns the status of the Cast device.
-     *
-     * @param timeout status timeout
-     * @return the status of the Cast device, never null
-     * @throws IOException if the received response is an error or cannot be parsed
-     * @throws TimeoutException if the timeout has elapsed before the status was received
-     */
-    final CastDeviceStatus receiverStatus(final Duration timeout) throws IOException, TimeoutException {
-        final CastMessage resp =
-                Requestor.stringPayload(channel).request(RECEIVER_NS, GetStatus.INSTANCE, timeout);
         return parseReceiverStatus(resp);
     }
 

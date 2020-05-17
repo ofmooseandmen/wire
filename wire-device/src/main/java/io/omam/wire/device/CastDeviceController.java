@@ -76,33 +76,6 @@ public interface CastDeviceController {
     void addListener(final CastDeviceControllerListener listener);
 
     /**
-     * Requests and returns the availability of the given applications.
-     *
-     * @param appIds ID of each application
-     * @return the availability of the given applications, never null
-     * @throws IOException in case of I/O error (including if connection has not be opened)
-     * @throws TimeoutException if the default timeout has elapsed before the availability of the given
-     *             applications was received
-     */
-    default AppAvailabilities appsAvailability(final Collection<String> appIds)
-            throws IOException, TimeoutException {
-        return appsAvailability(appIds, REQUEST_TIMEOUT);
-    }
-
-    /**
-     * Requests and returns the availability of the given applications.
-     *
-     * @param appIds ID of each application
-     * @param timeout response timeout
-     * @return the availability of the given applications, never null
-     * @throws IOException in case of I/O error (including if connection has not be opened)
-     * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
-     *             received
-     */
-    AppAvailabilities appsAvailability(final Collection<String> appIds, final Duration timeout)
-            throws IOException, TimeoutException;
-
-    /**
      * Changes the volume level of the device.
      *
      * @param level the volume level expressed as a double in the range [{@code 0.0}, {@code 1.0}]
@@ -176,6 +149,33 @@ public interface CastDeviceController {
     void disconnect();
 
     /**
+     * Requests and returns the availability of the given applications.
+     *
+     * @param appIds ID of each application
+     * @return the availability of the given applications, never null
+     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws TimeoutException if the default timeout has elapsed before the availability of the given
+     *             applications was received
+     */
+    default AppAvailabilities getAppsAvailability(final Collection<String> appIds)
+            throws IOException, TimeoutException {
+        return getAppsAvailability(appIds, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * Requests and returns the availability of the given applications.
+     *
+     * @param appIds ID of each application
+     * @param timeout response timeout
+     * @return the availability of the given applications, never null
+     * @throws IOException in case of I/O error (including if connection has not be opened)
+     * @throws TimeoutException if the timeout has elapsed before the availability of the given applications was
+     *             received
+     */
+    AppAvailabilities getAppsAvailability(final Collection<String> appIds, final Duration timeout)
+            throws IOException, TimeoutException;
+
+    /**
      * Requests and returns the current status of the Cast device.
      *
      * @return the current status of the Cast device, never null
@@ -221,7 +221,7 @@ public interface CastDeviceController {
      */
     default boolean isAppAvailable(final String appId, final Duration timeout)
             throws IOException, TimeoutException {
-        return appsAvailability(Arrays.asList(appId), timeout)
+        return getAppsAvailability(Arrays.asList(appId), timeout)
             .availabilities()
             .getOrDefault(appId, AppAvailability.APP_NOT_AVAILABLE) == AppAvailability.APP_AVAILABLE;
     }

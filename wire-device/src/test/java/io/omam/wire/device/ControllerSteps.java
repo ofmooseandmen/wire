@@ -198,7 +198,7 @@ public final class ControllerSteps {
     public final void whenAppAvailability(final String appId) {
         appAvail = exs.call(() ->
 
-        rt().controller().appsAvailability(Collections.singleton(appId)));
+        rt().controller().getAppsAvailability(Collections.singleton(appId)));
     }
 
     @When("the application {string} is requested to be launched")

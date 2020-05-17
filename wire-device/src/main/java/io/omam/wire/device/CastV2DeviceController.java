@@ -100,14 +100,6 @@ final class CastV2DeviceController implements CastDeviceController {
     }
 
     @Override
-    public final AppAvailabilities appsAvailability(final Collection<String> appIds, final Duration timeout)
-            throws IOException, TimeoutException {
-        LOGGER.info(() -> "Request availability of applications  " + appIds + " on device " + deviceNameOrId());
-        ensureConnected();
-        return receiver.appAvailability(appIds, timeout);
-    }
-
-    @Override
     public final CastDeviceStatus changeDeviceVolume(final double level, final Duration timeout)
             throws IOException, TimeoutException {
         LOGGER.info(() -> "Setting volume of device " + deviceNameOrId() + " to " + level);
@@ -143,10 +135,18 @@ final class CastV2DeviceController implements CastDeviceController {
     }
 
     @Override
+    public final AppAvailabilities getAppsAvailability(final Collection<String> appIds, final Duration timeout)
+            throws IOException, TimeoutException {
+        LOGGER.info(() -> "Request availability of applications  " + appIds + " on device " + deviceNameOrId());
+        ensureConnected();
+        return receiver.getAppAvailability(appIds, timeout);
+    }
+
+    @Override
     public final CastDeviceStatus getDeviceStatus(final Duration timeout) throws IOException, TimeoutException {
         LOGGER.info(() -> "Requesting status of device " + deviceNameOrId());
         ensureConnected();
-        return receiver.receiverStatus(timeout);
+        return receiver.getReceiverStatus(timeout);
     }
 
     @Override
