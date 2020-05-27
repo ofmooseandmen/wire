@@ -138,9 +138,9 @@ final class MediaControllerImpl implements MediaController {
     }
 
     @Override
-    public final MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
+    public final MediaStatus appendToQueue(final List<MediaInfo> medias, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
-        LOGGER.info(() -> "Adding " + medias.size() + " media to queue");
+        LOGGER.info(() -> "Appending " + medias.size() + " media to queue");
         return request(id -> new QueueInsert(id, toItems(medias)), timeout);
     }
 
@@ -179,6 +179,20 @@ final class MediaControllerImpl implements MediaController {
     }
 
     @Override
+    public final MediaStatus insertInQueue(final int beforeItemId, final List<MediaInfo> medias,
+            final Duration timeout) throws IOException, TimeoutException, MediaRequestException {
+        LOGGER.info(() -> "Inserting " + medias.size() + " media to queue before item " + beforeItemId);
+        return request(id -> new QueueInsert(id, beforeItemId, toItems(medias)), timeout);
+    }
+
+    @Override
+    public final MediaStatus jump(final int nb, final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
+        LOGGER.info(() -> "Requesting to " + (nb > 0 ? "skip" : "go back") + nb + " items in the queue");
+        return request(id -> QueueUpdate.jump(id, nb), timeout);
+    }
+
+    @Override
     public final MediaStatus load(final List<MediaInfo> medias, final RepeatMode repeatMode,
             final boolean autoplay, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
@@ -188,13 +202,6 @@ final class MediaControllerImpl implements MediaController {
         final MediaStatus resp = request(load, timeout);
         mediaSessionId = Optional.of(resp.mediaSessionId());
         return resp;
-    }
-
-    @Override
-    public final MediaStatus next(final Duration timeout)
-            throws IOException, TimeoutException, MediaRequestException {
-        LOGGER.info(() -> "Requesting playback of next queued media");
-        return request(id -> QueueUpdate.jump(id, 1), timeout);
     }
 
     @Override
@@ -209,13 +216,6 @@ final class MediaControllerImpl implements MediaController {
             throws IOException, TimeoutException, MediaRequestException {
         LOGGER.info(() -> "Resuming playback");
         return request(Play::new, timeout);
-    }
-
-    @Override
-    public final MediaStatus previous(final Duration timeout)
-            throws IOException, TimeoutException, MediaRequestException {
-        LOGGER.info(() -> "Requesting playback of previous queued media");
-        return request(id -> QueueUpdate.jump(id, -1), timeout);
     }
 
     @Override

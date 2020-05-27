@@ -83,6 +83,13 @@ public interface MediaStatus {
     }
 
     /**
+     * Returns the ID of the current media item.
+     *
+     * @return the ID of the current media item or {@code empty}
+     */
+    Optional<Integer> currentItemId();
+
+    /**
      * Returns the current playback position.
      *
      * @return the current playback position

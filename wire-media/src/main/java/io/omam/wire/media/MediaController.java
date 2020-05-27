@@ -83,9 +83,9 @@ public interface MediaController extends ApplicationController {
      * @throws TimeoutException if the timeout has elapsed before the response was received
      * @throws MediaRequestException if the request is rejected by the device
      */
-    default MediaStatus addToQueue(final List<MediaInfo> medias)
+    default MediaStatus appendToQueue(final List<MediaInfo> medias)
             throws IOException, TimeoutException, MediaRequestException {
-        return addToQueue(medias, REQUEST_TIMEOUT);
+        return appendToQueue(medias, REQUEST_TIMEOUT);
     }
 
     /**
@@ -98,7 +98,7 @@ public interface MediaController extends ApplicationController {
      * @throws TimeoutException if the timeout has elapsed before the response was received
      * @throws MediaRequestException if the request is rejected by the device
      */
-    MediaStatus addToQueue(final List<MediaInfo> medias, final Duration timeout)
+    MediaStatus appendToQueue(final List<MediaInfo> medias, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException;
 
     /**
@@ -180,6 +180,73 @@ public interface MediaController extends ApplicationController {
      * @throws MediaRequestException if the request is rejected by the device
      */
     List<QueueItem> getQueueItems(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException;
+
+    /**
+     * Request the player to insert the given medias in the queue before the given item.
+     *
+     * @param beforeItemId ID of the item that will be located immediately after the inserted list. If the ID is
+     *            not found or it is not provided, the list will be appended at the end of the existing list.
+     * @param medias list of medias to insert
+     * @return the current media status, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
+     */
+    default MediaStatus insertInQueue(final int beforeItemId, final List<MediaInfo> medias)
+            throws IOException, TimeoutException, MediaRequestException {
+        return insertInQueue(beforeItemId, medias, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * Request the player to insert the given medias in the queue before the given item.
+     *
+     * @param beforeItemId ID of the item that will be located immediately after the inserted list. If the ID is
+     *            not found or it is not provided, the list will be appended at the end of the existing list.
+     * @param medias list of medias to insert
+     * @param timeout response timeout
+     * @return the current media status, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
+     */
+    MediaStatus insertInQueue(final int beforeItemId, final List<MediaInfo> medias, final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException;
+
+    /**
+     * Requests the player to skip/go back the given number of items with respect to the position of the current
+     * item (it can be negative).
+     * <p>
+     * If given jump number is out of boundaries, the currentItem will be the next logical item in the queue
+     * wrapping around the boundaries. The new currentItem position will follow the rules of the queue repeat
+     * behaviour.
+     *
+     * @param nb number of item to jump forward (positive) or backward (negative)
+     * @return the current media status, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
+     */
+    default MediaStatus jump(final int nb) throws IOException, TimeoutException, MediaRequestException {
+        return jump(nb, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * Requests the player to skip/go back the given number of items with respect to the position of the current
+     * item (it can be negative).
+     * <p>
+     * If given jump number is out of boundaries, the currentItem will be the next logical item in the queue
+     * wrapping around the boundaries. The new currentItem position will follow the rules of the queue repeat
+     * behaviour.
+     *
+     * @param nb number of item to jump forward (positive) or backward (negative)
+     * @param timeout response timeout
+     * @return the current media status, never null
+     * @throws IOException if the received response is an error or cannot be parsed
+     * @throws TimeoutException if the timeout has elapsed before the response was received
+     * @throws MediaRequestException if the request is rejected by the device
+     */
+    MediaStatus jump(final int nb, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException;
 
     /**
@@ -265,7 +332,9 @@ public interface MediaController extends ApplicationController {
      * @throws TimeoutException if the timeout has elapsed before the response was received
      * @throws MediaRequestException if the request is rejected by the device
      */
-    MediaStatus next(final Duration timeout) throws IOException, TimeoutException, MediaRequestException;
+    default MediaStatus next(final Duration timeout) throws IOException, TimeoutException, MediaRequestException {
+        return jump(1, timeout);
+    }
 
     /**
      * Requests to pause the player.
@@ -334,7 +403,10 @@ public interface MediaController extends ApplicationController {
      * @throws TimeoutException if the timeout has elapsed before the response was received
      * @throws MediaRequestException if the request is rejected by the device
      */
-    MediaStatus previous(final Duration timeout) throws IOException, TimeoutException, MediaRequestException;
+    default MediaStatus previous(final Duration timeout)
+            throws IOException, TimeoutException, MediaRequestException {
+        return jump(-1, timeout);
+    }
 
     /**
      * Requests the player to remove the items corresponding to the given identifiers from the queue. The

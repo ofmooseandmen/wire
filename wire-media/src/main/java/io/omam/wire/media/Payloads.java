@@ -173,6 +173,8 @@ final class Payloads {
 
         private double currentTime;
 
+        private Integer currentItemId;
+
         private IdleReason idleReason;
 
         private List<QueueItemData> items;
@@ -191,6 +193,11 @@ final class Payloads {
 
         private MediaStatusData() {
             /* empty, initialised by GSON. */
+        }
+
+        @Override
+        public final Optional<Integer> currentItemId() {
+            return Optional.ofNullable(currentItemId);
         }
 
         @Override
@@ -320,9 +327,17 @@ final class Payloads {
         @SuppressWarnings("unused")
         private final List<QueueItem> items;
 
-        QueueInsert(final int aMediaSessionId, final List<QueueItem> someItems) {
+        @SuppressWarnings("unused")
+        private final Integer insertBefore;
+
+        QueueInsert(final int aMediaSessionId, final Integer beforeItemId, final List<QueueItem> someItems) {
             super("QUEUE_INSERT", aMediaSessionId);
             items = someItems;
+            insertBefore = beforeItemId;
+        }
+
+        QueueInsert(final int aMediaSessionId, final List<QueueItem> someItems) {
+            this(aMediaSessionId, null, someItems);
         }
 
     }
