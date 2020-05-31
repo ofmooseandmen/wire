@@ -75,18 +75,24 @@ public final class MediaInfo {
     /** {@link #contentId()}, never null. */
     private final StreamType streamType;
 
+    /** {@link #customData()}, may be null. */
+    private final Object customData;
+
     /**
      * Constructor.
      *
      * @param aContentId content ID (URL), not null
      * @param aContentType content MIME type, not null
      * @param aStreamType stream type, not null
+     * @param someCustomData application-specific media information, may be null
      */
-    public MediaInfo(final String aContentId, final String aContentType, final StreamType aStreamType) {
+    public MediaInfo(final String aContentId, final String aContentType, final StreamType aStreamType,
+            final Object someCustomData) {
         contentId = Objects.requireNonNull(aContentId);
         duration = null;
         contentType = Objects.requireNonNull(aContentType);
         streamType = Objects.requireNonNull(aStreamType);
+        customData = someCustomData;
     }
 
     /**
@@ -98,8 +104,21 @@ public final class MediaInfo {
      * @throws IOException if an I/O error occurs
      */
     public static MediaInfo fromDataStream(final String contentId) throws IOException {
+        return fromDataStream(contentId, null);
+    }
+
+    /**
+     * Stored media streamed from an existing data store, {@link Files#probeContentType(java.nio.file.Path)
+     * probing} its content MIME.
+     *
+     * @param contentId content ID (URL) of the media, not null
+     * @param customData application-specific media information, may be null
+     * @return {@link MediaInfo} instance
+     * @throws IOException if an I/O error occurs
+     */
+    public static MediaInfo fromDataStream(final String contentId, final Object customData) throws IOException {
         final String contentType = Files.probeContentType(Paths.get(contentId));
-        return new MediaInfo(contentId, contentType, StreamType.BUFFERED);
+        return new MediaInfo(contentId, contentType, StreamType.BUFFERED, customData);
     }
 
     /**
@@ -111,8 +130,21 @@ public final class MediaInfo {
      * @throws IOException if an I/O error occurs
      */
     public static MediaInfo fromLiveStream(final String contentId) throws IOException {
+        return fromLiveStream(contentId, null);
+    }
+
+    /**
+     * Live media generated on the fly, {@link Files#probeContentType(java.nio.file.Path) probing} its content
+     * MIME.
+     *
+     * @param contentId content ID (URL) of the media, not null
+     * @param customData application-specific media information, may be null
+     * @return {@link MediaInfo} instance
+     * @throws IOException if an I/O error occurs
+     */
+    public static MediaInfo fromLiveStream(final String contentId, final Object customData) throws IOException {
         final String contentType = Files.probeContentType(Paths.get(contentId));
-        return new MediaInfo(contentId, contentType, StreamType.LIVE);
+        return new MediaInfo(contentId, contentType, StreamType.LIVE, customData);
     }
 
     /**
@@ -134,9 +166,18 @@ public final class MediaInfo {
     }
 
     /**
+     * Returns the application-specific media information, if any.
+     *
+     * @return the application-specific media information or empty
+     */
+    public final Optional<Object> customData() {
+        return Optional.ofNullable(customData);
+    }
+
+    /**
      * Returns the media duration if known.
      *
-     * @return the media duration if known
+     * @return the media duration or empty
      */
     public final Optional<Duration> duration() {
         return duration == null ? Optional.empty() : Optional.of(Duration.ofMillis((long) (duration * 1000)));
