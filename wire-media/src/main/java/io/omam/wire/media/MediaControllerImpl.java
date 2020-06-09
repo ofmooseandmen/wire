@@ -188,7 +188,7 @@ final class MediaControllerImpl implements MediaController {
     @Override
     public final MediaStatus jump(final int nb, final Duration timeout)
             throws IOException, TimeoutException, MediaRequestException {
-        LOGGER.info(() -> "Requesting to " + (nb > 0 ? "skip" : "go back") + nb + " items in the queue");
+        LOGGER.info(() -> "Requesting to " + (nb > 0 ? "skip " : "go back ") + nb + " items in the queue");
         return request(id -> QueueUpdate.jump(id, nb), timeout);
     }
 
