@@ -44,12 +44,15 @@ import io.omam.wire.app.ApplicationWire;
 /**
  * Default Media Receiver controller.
  * <p>
- * Only a sub-part of the API is implemented.
- * <p>
- * The receiving Cast device can support either video and audio streams or audio streams only. Do not load a video
- * streams if not supported.
- * <p>
- * This application is available on all devices.
+ * Notes:
+ * <ul>
+ * <li>Only a sub-part of the API is implemented.
+ * <li>The receiving Cast device can support either video and audio streams or audio streams only. Do not load a
+ * video streams if not supported.
+ * <li>This application is available on all devices.
+ * <li>a {@link TimeoutException} <strong>does not</strong> indicate that the receiving Cast device did not process
+ * the request but only that a response has not been received before the timeout elapsed.
+ * </ul>
  */
 public interface MediaController extends ApplicationController {
 
@@ -134,7 +137,6 @@ public interface MediaController extends ApplicationController {
      * @return the current media status, never null
      * @throws IOException if the received response is an error or cannot be parsed
      * @throws TimeoutException if the timeout has elapsed before the response was received
-     * @throws MediaRequestException if the request is rejected by the device
      * @throws MediaRequestException if the request is rejected by the device
      */
     default MediaStatus getMediaStatus() throws IOException, TimeoutException, MediaRequestException {
