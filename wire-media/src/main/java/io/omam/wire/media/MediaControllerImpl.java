@@ -50,6 +50,7 @@ import io.omam.wire.app.ApplicationData;
 import io.omam.wire.app.ApplicationWire;
 import io.omam.wire.io.CastChannel.CastMessage;
 import io.omam.wire.io.json.Payload;
+import io.omam.wire.media.MediaStatus.PlayerState;
 import io.omam.wire.media.Payloads.ErrorData;
 import io.omam.wire.media.Payloads.GetStatus;
 import io.omam.wire.media.Payloads.Load;
@@ -120,6 +121,25 @@ final class MediaControllerImpl implements MediaController {
     }
 
     /**
+     * Throws {@link MediaRequestException} if given response is an error.
+     *
+     * @param resp message
+     * @throws IOException in case of I/O error
+     * @throws MediaRequestException if message is an error
+     */
+    private static void throwIfError(final CastMessage resp) throws IOException, MediaRequestException {
+        final Optional<String> opType = parse(resp).type();
+        if (!opType.isPresent()) {
+            throw new IOException("Invalid response - unknown type");
+        }
+        final String type = opType.get();
+        if (ERRORS.contains(type)) {
+            final Error error = parse(resp, type, ErrorData.class);
+            throw new MediaRequestException(error);
+        }
+    }
+
+    /**
      * List of Medias to list of QueueItems.
      * <p>
      * autoplay is true, preload time is 1 second and start time is 0 second.
@@ -129,6 +149,19 @@ final class MediaControllerImpl implements MediaController {
      */
     private static List<QueueItem> toItems(final List<MediaInfo> medias) {
         return medias.stream().map(m -> new QueueItemData(true, m, 1, 0)).collect(Collectors.toList());
+    }
+
+    /**
+     * Formats media status.
+     *
+     * @param ms media status or empty
+     * @return string
+     */
+    private static String toString(final Optional<MediaStatusData> ms) {
+        return "session "
+            + ms.map(MediaStatus::mediaSessionId).map(i -> Integer.toString(i)).orElse("?")
+            + "; player is "
+            + ms.map(MediaStatus::playerState).map(PlayerState::toString).orElse("UNKNOWN");
     }
 
     @Override
@@ -279,10 +312,10 @@ final class MediaControllerImpl implements MediaController {
      * @param message the received message
      */
     private void notifyMediaStatus(final CastMessage message) {
-        LOGGER.info(() -> "Received updated media status");
         try {
             final Optional<MediaStatusData> optStatus =
                     parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
+            LOGGER.info(() -> "Received updated media status " + toString(optStatus));
             if (optStatus.isPresent()) {
                 final MediaStatus ms = optStatus.get();
                 if (!mediaSessionId.isPresent()) {
@@ -291,7 +324,7 @@ final class MediaControllerImpl implements MediaController {
                 }
                 listeners.forEach(l -> l.mediaStatusUpdated(ms));
             } else {
-                LOGGER.fine(() -> "Received invalid media status");
+                LOGGER.warning(() -> "Received invalid media status: " + message.getPayloadUtf8());
             }
         } catch (final IOException e) {
             LOGGER.log(Level.FINE, e, () -> "Could not parse received media status");
@@ -335,26 +368,8 @@ final class MediaControllerImpl implements MediaController {
 
         final Optional<MediaStatusData> status =
                 parse(resp, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
+        LOGGER.info(() -> "Received response media status " + toString(status));
         return status.orElseThrow(() -> new IOException("Invalid response - no media status"));
-    }
-
-    /**
-     * Throws {@link MediaRequestException} if given response is an error.
-     *
-     * @param resp message
-     * @throws IOException in case of I/O error
-     * @throws MediaRequestException if message is an error
-     */
-    private void throwIfError(final CastMessage resp) throws IOException, MediaRequestException {
-        final Optional<String> opType = parse(resp).type();
-        if (!opType.isPresent()) {
-            throw new IOException("Invalid response - unknown type");
-        }
-        final String type = opType.get();
-        if (ERRORS.contains(type)) {
-            final Error error = parse(resp, type, ErrorData.class);
-            throw new MediaRequestException(error);
-        }
     }
 
 }
