@@ -324,7 +324,7 @@ final class MediaControllerImpl implements MediaController {
                 }
                 listeners.forEach(l -> l.mediaStatusUpdated(ms));
             } else {
-                LOGGER.warning(() -> "Received invalid media status: " + message.getPayloadUtf8());
+                LOGGER.warning(() -> "Received empty media status");
             }
         } catch (final IOException e) {
             LOGGER.log(Level.FINE, e, () -> "Could not parse received media status");
