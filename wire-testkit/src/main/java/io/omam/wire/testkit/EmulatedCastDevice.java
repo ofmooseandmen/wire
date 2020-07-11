@@ -81,7 +81,7 @@ public final class EmulatedCastDevice implements AutoCloseable {
      */
     private static final class AppAvailabilityReq extends Payload {
 
-        public static final String TYPE = "GET_APP_AVAILABILITY";
+        static final String TYPE = "GET_APP_AVAILABILITY";
 
         /** ID of each application. */
         private Collection<String> appId;

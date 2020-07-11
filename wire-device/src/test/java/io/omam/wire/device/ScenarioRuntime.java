@@ -100,9 +100,6 @@ final class ScenarioRuntime implements CastDeviceControllerListener {
 
     }
 
-    /** {@code true} if setup has been performed. */
-    private boolean setup;
-
     /** the controller being tested. */
     private CastDeviceController ctrl;
 
@@ -175,13 +172,22 @@ final class ScenarioRuntime implements CastDeviceControllerListener {
      * Tears down the run time.
      */
     final void tearDown() {
-        setup = false;
         if (ctrl != null) {
             ctrl.disconnect();
             ctrl = null;
         }
         if (ecd != null) {
             ecd.close();
+            ecd = null;
+        }
+    }
+
+    private void ensureNotSetup() {
+        if (ecd != null) {
+            throw new IllegalStateException("Emuated device already setup");
+        }
+        if (ctrl != null) {
+            throw new IllegalStateException("Controller already setup");
         }
     }
 
@@ -191,9 +197,7 @@ final class ScenarioRuntime implements CastDeviceControllerListener {
      * @throws GeneralSecurityException from controller
      */
     private void setupEmulatedDevice() throws GeneralSecurityException {
-        if (setup) {
-            throw new IllegalStateException("Setup already done");
-        }
+        ensureNotSetup();
         System.setProperty("io.omam.wire.device.heartbeatIntervalMs", "2000");
         ecd = new EmulatedCastDevice();
         final String deviceId = UUID.randomUUID().toString();
@@ -208,9 +212,7 @@ final class ScenarioRuntime implements CastDeviceControllerListener {
      * @throws GeneralSecurityException from controller
      */
     private void setupRealDevice() throws GeneralSecurityException {
-        if (setup) {
-            throw new IllegalStateException("Setup already done");
-        }
+        ensureNotSetup();
         final String deviceId = UUID.randomUUID().toString();
         final InetSocketAddress address = WireTestKit.realDeviceAddr();
         ctrl = CastDeviceController.v2(deviceId, address, Optional.empty());
