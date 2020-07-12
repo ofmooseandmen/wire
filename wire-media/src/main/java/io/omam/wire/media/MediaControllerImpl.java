@@ -208,7 +208,10 @@ final class MediaControllerImpl implements MediaController {
 
         final QueueItemIds queueItemIds = parse(resp, QueueItemIds.TYPE, QueueItemIds.class);
         resp = wire.request(NAMESPACE, destination, new QueueGetItems(mid, queueItemIds.itemIds()), timeout);
-        return parse(resp, QueueItems.TYPE, QueueItems.class).items();
+
+        final List<QueueItem> items = parse(resp, QueueItems.TYPE, QueueItems.class).items();
+        LOGGER.info(() -> "Received response with " + items.size() + " queue items");
+        return items;
     }
 
     @Override
