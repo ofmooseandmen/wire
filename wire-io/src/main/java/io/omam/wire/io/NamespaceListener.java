@@ -1,5 +1,5 @@
 /*
-Copyright 2018-2020 Cedric Liegeois
+Copyright 2020-2020 Cedric Liegeois
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -28,27 +28,28 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package io.omam.wire.device;
+package io.omam.wire.io;
 
 import io.omam.wire.io.CastChannel.CastMessage;
 
 /**
- * Listener interface for receiving channel events.
+ * Listener interface to receive messages for a given namespace.
  */
-interface ChannelListener {
+public interface NamespaceListener {
 
     /**
-     * Invoked when a message has been received.
+     * Invoked when a response that could not be correlated with a request has been received - the request has timeout
+     * and {@link java.util.concurrent.TimeoutException TimeoutException} has been thrown.
      *
-     * @param message the received message
+     * @param message message
      */
-    void messageReceived(final CastMessage message);
+    void uncorrelatedResponseReceived(final CastMessage message);
 
     /**
-     * Invoked when a socket error occurred.
-     * <p>
-     * The channel has been closed before this event fires
+     * Invoked when an unsolicited message - i.e. not a response to a request, has been received.
+     *
+     * @param message message
      */
-    void socketError();
+    void unsolicitedMessageReceived(final CastMessage message);
 
 }

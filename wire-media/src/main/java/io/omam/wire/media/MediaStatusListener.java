@@ -31,22 +31,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire.media;
 
 /**
- * The listener interface for receiving <strong>unsolicited</strong> media updates from the media application.
+ * The listener interface for receiving <strong>unsolicited</strong> and <strong>timeout</strong> media updates
+ * from the media application.
  */
 public interface MediaStatusListener {
 
     /**
      * Invoked when a media error has been sent by the application.
-     * 
+     *
      * @param error the error
+     * @param timeout true if and only if the received error is a response to a request which had timeout
      */
-    void mediaErrorReceived(final Error error);
+    void mediaErrorReceived(final Error error, final boolean timeout);
 
     /**
      * Invoked when the status of the current media session has been updated by the application.
      *
      * @param status the status of the current media session
+     * @param timeout true if and only if the received media status is a response to a request which had timeout
      */
-    void mediaStatusUpdated(final MediaStatus status);
+    void mediaStatusUpdated(final MediaStatus status, final boolean timeout);
 
 }

@@ -35,7 +35,7 @@ import java.util.Optional;
 /**
  * Base class of all Cast V2 {@code PayloadType.STRING} payloads.
  * <p>
- * Depending on the message either {@link #type()} or {@link #responseType()} is present. Note that some response
+ * Depending on the message either {@link #type()} or {@link #responseType()} is present. Note that some responses
  * contain {@link #type()} instead of {@link #responseType()}.
  */
 public abstract class Payload {

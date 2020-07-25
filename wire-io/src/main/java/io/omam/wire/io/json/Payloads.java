@@ -34,7 +34,6 @@ import static io.omam.wire.io.IoProperties.SENDER_ID;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -47,9 +46,6 @@ import io.omam.wire.io.CastChannel.CastMessage.ProtocolVersion;
  * JSON Payloads exchanged with a Cast device.
  */
 public final class Payloads {
-
-    /** request id counter. */
-    private static final AtomicInteger NEXT_REQUEST_ID = new AtomicInteger(0);
 
     /** Gson instance. */
     private static final Gson GSON = new Gson();
@@ -84,18 +80,19 @@ public final class Payloads {
     }
 
     /**
-     * Returns a new request for the given destination with the given namespace and payload. A unique request ID
-     * will be automatically inserted in the given payload.
+     * Returns a new request for the given destination with the given namespace and payload. The given request ID
+     * is inserted in the given payload.
      *
      * @param namespace namespace
      * @param payload payload
      * @param <T> type of the payload
      * @param destination destination ID
+     * @param requestId the request ID - must be unique
      * @return a new {@link CastMessage}
      */
     public static <T extends Payload> CastMessage buildRequest(final String namespace, final String destination,
-            final T payload) {
-        payload.setRequestId(nextRequestId());
+            final T payload, final int requestId) {
+        payload.setRequestId(requestId);
         return buildMessage(namespace, destination, payload);
     }
 
@@ -163,15 +160,6 @@ public final class Payloads {
         } catch (final JsonSyntaxException | ClassCastException | IllegalArgumentException e) {
             throw new IOException("Could not parse [" + payload + "]", e);
         }
-    }
-
-    /**
-     * Returns the next request ID to set into the payload of a request.
-     *
-     * @return the next request ID
-     */
-    private static int nextRequestId() {
-        return NEXT_REQUEST_ID.incrementAndGet();
     }
 
 }

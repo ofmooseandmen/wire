@@ -31,7 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package io.omam.wire.device;
 
 /**
- * The listener interface for receiving <strong>unsolicited</strong> device status events.
+ * The listener interface for receiving <strong>unsolicited</strong> or <strong>timeout</strong> device status
+ * events.
  */
 @FunctionalInterface
 public interface CastDeviceStatusListener {
@@ -40,7 +41,8 @@ public interface CastDeviceStatusListener {
      * Invoked when the status of the device has been updated.
      *
      * @param status the device status
+     * @param timeout true if and only if the received status is a response to a request which had timeout
      */
-    void deviceStatusUpdated(final CastDeviceStatus status);
+    void deviceStatusUpdated(final CastDeviceStatus status, final boolean timeout);
 
 }

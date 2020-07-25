@@ -78,8 +78,13 @@ public final class ControllerSteps {
         }
 
         @Override
-        public final void unsolicitedMessageReceived(final String type, final CastMessage message) {
-            // empty.
+        public final void uncorrelatedResponseReceived(final CastMessage message) {
+            // empty
+        }
+
+        @Override
+        public final void unsolicitedMessageReceived(final CastMessage message) {
+            // empty
         }
 
     }

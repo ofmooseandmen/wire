@@ -28,21 +28,33 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package io.omam.wire.app;
+package io.omam.wire.device;
 
-import io.omam.wire.io.NamespaceListener;
+import io.omam.wire.io.CastChannel.CastMessage;
 
 /**
- * An application controller. Specific implementation of this interface implements the namespace/protocol to
- * control the application.
+ * Handler that tries and correlates received messages with transmitted requests.
  */
-public interface ApplicationController extends NamespaceListener {
+interface ResponseHandler {
 
     /**
-     * Returns the details of this application.
-     *
-     * @return the details of this application
+     * Request/response correlation result.
      */
-    ApplicationData details();
+    enum CorrelationResult {
+        /** Unsolicited message received - i.e. not a response. */
+        UNSOLICITED,
+        /** Response successfully correlated with a request. */
+        UNCORRELATED,
+        /** Response not correlated with a request - i.e. request has timeout. */
+        CORRELATED;
+    }
+
+    /**
+     * Tries and correlates the given message with a transmitted request.
+     *
+     * @param message the message
+     * @return the correlation result
+     */
+    CorrelationResult tryCorrelate(final CastMessage message);
 
 }

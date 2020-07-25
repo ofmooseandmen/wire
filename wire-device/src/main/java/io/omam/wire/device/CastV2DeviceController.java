@@ -34,8 +34,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
@@ -62,19 +60,19 @@ final class CastV2DeviceController implements CastDeviceController {
     private final String id;
 
     /** communication channel. */
-    private final CastV2Channel channel;
+    private final SocketChannel channel;
 
     /** Cast device friendly name. */
     private final Optional<String> name;
+
+    /** requestor. */
+    private final Requestor requestor;
 
     /** connection controller. */
     private final ConnectionController connection;
 
     /** device status controller. */
     private final ReceiverController receiver;
-
-    /** mapping between application controllers and channel listeners. */
-    private final Map<ApplicationController, ChannelListener> appListeners;
 
     /**
      * Constructor.
@@ -83,13 +81,19 @@ final class CastV2DeviceController implements CastDeviceController {
      * @param aChannel communication channel
      * @param aName Cast device name
      */
-    CastV2DeviceController(final String anId, final CastV2Channel aChannel, final Optional<String> aName) {
+    CastV2DeviceController(final String anId, final SocketChannel aChannel, final Optional<String> aName) {
         id = anId;
         channel = aChannel;
         name = aName;
-        connection = new ConnectionController(channel);
-        receiver = new ReceiverController(channel);
-        appListeners = new IdentityHashMap<>();
+
+        requestor = new Requestor(channel);
+        channel.setResponseHandler(requestor);
+
+        connection = new ConnectionController(channel, requestor);
+        channel.setSocketErrorHandler(connection);
+
+        receiver = new ReceiverController(requestor);
+        channel.addNamespaceListener(receiver, ReceiverController.RECEIVER_NS);
     }
 
     @Override
@@ -174,13 +178,11 @@ final class CastV2DeviceController implements CastDeviceController {
             .filter(a -> a.applicationId().equals(appId))
             .findFirst()
             .orElseThrow(() -> new IOException("Received status does not contain application [" + appId + "]"));
-        final T ctrl = controllerSupplier.apply(app, new DefaultApplicationWire(channel));
-        final ApplicationListener appListener = new ApplicationListener(ctrl);
-        app.namespaces().forEach(ns -> channel.addListener(appListener, ns.name()));
+        final T ctrl = controllerSupplier.apply(app, new DefaultApplicationWire(channel, requestor));
+        app.namespaces().forEach(ns -> channel.addNamespaceListener(ctrl, ns.name()));
         if (joinAppSession) {
             joinAppSession(ctrl);
         }
-        appListeners.put(ctrl, appListener);
         return ctrl;
     }
 
@@ -207,13 +209,9 @@ final class CastV2DeviceController implements CastDeviceController {
                 + " on device "
                 + deviceNameOrId());
         ensureConnected();
-        final ChannelListener appListener = appListeners.remove(app);
-        if (appListener == null) {
-            throw new IOException("application " + app.details().applicationId() + " has not be launched");
-        }
         connection.leaveAppSession(app.details().transportId());
         final CastDeviceStatus cds = receiver.stopApp(app.details().sessionId(), timeout);
-        channel.removeListener(appListener);
+        channel.removeNamespaceListener(app);
         return cds;
     }
 

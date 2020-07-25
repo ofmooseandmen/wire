@@ -45,7 +45,6 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,56 +53,15 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import io.omam.wire.device.ResponseHandler.CorrelationResult;
 import io.omam.wire.io.CastChannel.CastMessage;
 import io.omam.wire.io.CastMessageCodec;
+import io.omam.wire.io.NamespaceListener;
 
 /**
- * TCP Channel to communicate with a Cast device over the Cast V2 protocol.
+ * Socket based channel to communicate with a Cast device.
  */
-final class CastV2Channel {
-
-    /**
-     * {@link ChannelListener} that notifies messages only for a given namespace.
-     */
-    private static final class ByNamespaceListener implements ChannelListener {
-
-        /** namespace. */
-        private final String ns;
-
-        /** decorated listener. */
-        private final ChannelListener l;
-
-        /**
-         * Constructor.
-         *
-         * @param namespace namespace
-         * @param listener decorated listener
-         */
-        ByNamespaceListener(final String namespace, final ChannelListener listener) {
-            ns = namespace;
-            l = listener;
-        }
-
-        @Override
-        public final void messageReceived(final CastMessage message) {
-            if (message.getNamespace().equals(ns)) {
-                l.messageReceived(message);
-            }
-        }
-
-        @Override
-        public final void socketError() {
-            l.socketError();
-        }
-
-        /**
-         * @return the decorated listener.
-         */
-        final ChannelListener listener() {
-            return l;
-        }
-
-    }
+final class SocketChannel {
 
     /**
      * Google Cast's certificate cannot be validated against standard keystore, so use a dummy trust-all manager.
@@ -134,6 +92,53 @@ final class CastV2Channel {
     }
 
     /**
+     * {@link NamespaceListener} implementation.
+     */
+    private static final class NamespaceListenerImpl implements NamespaceListener {
+
+        /** namespace. */
+        private final String ns;
+
+        /** decorated listener. */
+        private final NamespaceListener l;
+
+        /**
+         * Constructor.
+         *
+         * @param namespace namespace
+         * @param listener decorated listener
+         */
+        NamespaceListenerImpl(final String namespace, final NamespaceListener listener) {
+            ns = namespace;
+            l = listener;
+        }
+
+        @SuppressWarnings("synthetic-access")
+        @Override
+        public final void uncorrelatedResponseReceived(final CastMessage message) {
+            if (message.getNamespace().equals(ns)) {
+                LOGGER.warning(() -> "Received uncorrelated response: " + message);
+                l.uncorrelatedResponseReceived(message);
+            }
+        }
+
+        @Override
+        public final void unsolicitedMessageReceived(final CastMessage message) {
+            if (message.getNamespace().equals(ns)) {
+                l.unsolicitedMessageReceived(message);
+            }
+        }
+
+        /**
+         * @return the decorated listener.
+         */
+        final NamespaceListener listener() {
+            return l;
+        }
+
+    }
+
+    /**
      * Thread to notify listener about received messages and socket errors.
      */
     private final class Notifier extends Thread {
@@ -150,13 +155,90 @@ final class CastV2Channel {
         public final void run() {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    final Consumer<ChannelListener> event = receivingQueue.take();
-                    listeners.forEach(event);
+                    final ReceivedEvent event = receivingQueue.take();
+                    if (event.isException()) {
+                        socketErrorHandler.ifPresent(seh -> seh.socketError(event.exception()));
+                    } else {
+                        final CastMessage msg = event.message();
+                        final CorrelationResult correlated = responseHandler
+                            .map(rh -> rh.tryCorrelate(msg))
+                            .orElse(CorrelationResult.UNSOLICITED);
+                        if (correlated == CorrelationResult.UNSOLICITED) {
+                            listeners.forEach(l -> l.unsolicitedMessageReceived(msg));
+                        } else if (correlated == CorrelationResult.UNCORRELATED) {
+                            listeners.forEach(l -> l.uncorrelatedResponseReceived(msg));
+                        }
+                    }
                 } catch (final InterruptedException e) {
                     LOGGER.log(Level.FINE, "Interrupted while waiting to notify listeners", e);
                     Thread.currentThread().interrupt();
                 }
             }
+        }
+
+    }
+
+    /**
+     * An event generated by the device.
+     */
+    private static final class ReceivedEvent {
+
+        /** received message or null if exception. */
+        private final CastMessage message;
+
+        /** generated exception or null if message. */
+        private final IOException exception;
+
+        /**
+         * Constructor.
+         *
+         * @param aMessage received message or null if exception
+         * @param anException generated exception or null if message
+         */
+        private ReceivedEvent(final CastMessage aMessage, final IOException anException) {
+            message = aMessage;
+            exception = anException;
+        }
+
+        /**
+         * A new received event that represents a generated exception.
+         *
+         * @param exception I/O exception
+         * @return a new received event that represents a generated exception
+         */
+        static ReceivedEvent exception(final IOException exception) {
+            return new ReceivedEvent(null, exception);
+        }
+
+        /**
+         * A new received event that represents a received message.
+         *
+         * @param message message
+         * @return a new received event that represents a received message
+         */
+        static ReceivedEvent message(final CastMessage message) {
+            return new ReceivedEvent(message, null);
+        }
+
+        /**
+         * @return the generated exception.
+         */
+        final IOException exception() {
+            return Objects.requireNonNull(exception);
+        }
+
+        /**
+         * @return true if this received event represents an exception.
+         */
+        final boolean isException() {
+            return exception != null;
+        }
+
+        /**
+         * @return the received message.
+         */
+        final CastMessage message() {
+            return Objects.requireNonNull(message);
         }
 
     }
@@ -190,14 +272,14 @@ final class CastV2Channel {
                     if (optMsg.isPresent()) {
                         final CastMessage msg = optMsg.get();
                         LOGGER.fine(() -> "Received message [" + msg + "]");
-                        receivingQueue.add(l -> l.messageReceived(msg));
+                        receivingQueue.add(ReceivedEvent.message(msg));
                     } else {
                         closed = true;
                     }
                 } catch (final SSLException | SocketException e) {
                     if (!closed) {
                         LOGGER.log(level(e), "Socket error", e);
-                        receivingQueue.add(ChannelListener::socketError);
+                        receivingQueue.add(ReceivedEvent.exception(e));
                         closed = true;
                     }
                 } catch (final IOException e) {
@@ -239,7 +321,7 @@ final class CastV2Channel {
                     doSend(msg);
                 } catch (final SSLException | SocketException e) {
                     LOGGER.log(level(e), "Socket closed", e);
-                    listeners.forEach(ChannelListener::socketError);
+                    receivingQueue.add(ReceivedEvent.exception(e));
                     error = true;
                 } catch (final IOException e) {
                     LOGGER.log(Level.WARNING, "I/O error while sending message", e);
@@ -253,7 +335,7 @@ final class CastV2Channel {
     }
 
     /** logger. */
-    private static final Logger LOGGER = Logger.getLogger(CastV2Channel.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(SocketChannel.class.getName());
 
     /** how long to wait for the receiver/sender thread to die. */
     private static final long JOIN_WAIT = 1000L;
@@ -271,7 +353,7 @@ final class CastV2Channel {
     private Socket socket;
 
     /** received message listeners. */
-    private final ConcurrentLinkedQueue<ByNamespaceListener> listeners;
+    private final ConcurrentLinkedQueue<NamespaceListenerImpl> listeners;
 
     /** thread to notify listeners. */
     private Notifier notifier;
@@ -286,7 +368,13 @@ final class CastV2Channel {
     private final BlockingQueue<CastMessage> sendingQueue;
 
     /** queue of received message/events. */
-    private final BlockingQueue<Consumer<ChannelListener>> receivingQueue;
+    private final BlockingQueue<ReceivedEvent> receivingQueue;
+
+    /** response handler. */
+    private Optional<ResponseHandler> responseHandler;
+
+    /** socket error handler. */
+    private Optional<SocketErrorHandler> socketErrorHandler;
 
     /**
      * Constructor.
@@ -294,7 +382,7 @@ final class CastV2Channel {
      * @param address device socket address
      * @param sslContext secure socket protocol
      */
-    private CastV2Channel(final InetSocketAddress address, final SSLContext sslContext) {
+    private SocketChannel(final InetSocketAddress address, final SSLContext sslContext) {
         ias = address;
         sc = sslContext;
         connected = false;
@@ -305,6 +393,8 @@ final class CastV2Channel {
         sender = null;
         sendingQueue = new LinkedBlockingQueue<>();
         receivingQueue = new LinkedBlockingQueue<>();
+        responseHandler = Optional.empty();
+        socketErrorHandler = Optional.empty();
     }
 
     /**
@@ -314,10 +404,10 @@ final class CastV2Channel {
      * @return a new TLS channel
      * @throws GeneralSecurityException in case of security error
      */
-    static CastV2Channel create(final InetSocketAddress address) throws GeneralSecurityException {
+    static SocketChannel create(final InetSocketAddress address) throws GeneralSecurityException {
         final SSLContext sc = SSLContext.getInstance("SSL");
         sc.init(null, new TrustManager[] { new CastX509TrustManager() }, new SecureRandom());
-        return new CastV2Channel(address, sc);
+        return new SocketChannel(address, sc);
     }
 
     /**
@@ -356,9 +446,9 @@ final class CastV2Channel {
      * @param listener listener
      * @param namespace namespace
      */
-    final void addListener(final ChannelListener listener, final String namespace) {
-        Objects.requireNonNull(listener);
-        listeners.add(new ByNamespaceListener(namespace, listener));
+    final void addNamespaceListener(final NamespaceListener listener, final String namespace) {
+        Objects.requireNonNull(listener, namespace);
+        listeners.add(new NamespaceListenerImpl(namespace, listener));
     }
 
     /**
@@ -431,7 +521,7 @@ final class CastV2Channel {
      *
      * @param listener listener
      */
-    final void removeListener(final ChannelListener listener) {
+    final void removeNamespaceListener(final NamespaceListener listener) {
         Objects.requireNonNull(listener);
         listeners.removeIf(bnl -> bnl.listener().equals(listener));
     }
@@ -443,6 +533,26 @@ final class CastV2Channel {
      */
     final void send(final CastMessage message) {
         sendingQueue.add(message);
+    }
+
+    /**
+     * Sets the handler that processes all responses.
+     *
+     * @param handler response handler
+     */
+    final void setResponseHandler(final ResponseHandler handler) {
+        Objects.requireNonNull(handler);
+        responseHandler = Optional.of(handler);
+    }
+
+    /**
+     * Sets the handler that processes all socket error.
+     *
+     * @param handler socket error handler
+     */
+    final void setSocketErrorHandler(final SocketErrorHandler handler) {
+        Objects.requireNonNull(handler);
+        socketErrorHandler = Optional.of(handler);
     }
 
     /**

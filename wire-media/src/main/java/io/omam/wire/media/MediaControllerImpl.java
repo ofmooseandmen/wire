@@ -285,27 +285,33 @@ final class MediaControllerImpl implements MediaController {
     }
 
     @Override
-    public final void unsolicitedMessageReceived(final String type, final CastMessage message) {
-        if (MediaStatusResponse.TYPE.equals(type)) {
-            notifyMediaStatus(message);
-        } else if (ErrorType.ERROR.name().equals(type)) {
-            notifyMediaError(message);
-        }
+    public final void uncorrelatedResponseReceived(final CastMessage message) {
+        notifyListeners(message, true);
+    }
+
+    @Override
+    public final void unsolicitedMessageReceived(final CastMessage message) {
+        notifyListeners(message, false);
     }
 
     /**
-     * Notifies listeners about the received error.
+     * Notifies listeners.
      *
-     * @param message the received message
+     * @param message received message
+     * @param timeout true if and only if the message is a response to a request which had timeout
      */
-    private void notifyMediaError(final CastMessage message) {
-        LOGGER.warning(() -> "Received media error");
+    private void notifyListeners(final CastMessage message, final boolean timeout) {
         try {
-            final Error error = parse(message, ErrorType.ERROR.name(), ErrorData.class);
-            LOGGER.warning(() -> "Received media error: " + error);
-            listeners.forEach(l -> l.mediaErrorReceived(error));
-        } catch (final IOException e) {
-            LOGGER.log(Level.FINE, e, () -> "Could not parse received media error");
+            final MediaStatusResponse status = parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class);
+            notifyMediaStatus(status, timeout);
+        } catch (final IOException e1) {
+            try {
+                final Error error = parse(message, ErrorType.ERROR.name(), ErrorData.class);
+                LOGGER.warning(() -> "Received media error: " + error);
+                listeners.forEach(l -> l.mediaErrorReceived(error, timeout));
+            } catch (final IOException e2) {
+                LOGGER.log(Level.FINE, e2, () -> "Could not parse received media message");
+            }
         }
     }
 
@@ -313,24 +319,20 @@ final class MediaControllerImpl implements MediaController {
      * Notifies listeners about the received media status.
      *
      * @param message the received message
+     * @param timeout true if and only if the message is a response to a request which had timeout
      */
-    private void notifyMediaStatus(final CastMessage message) {
-        try {
-            final Optional<MediaStatusData> optStatus =
-                    parse(message, MediaStatusResponse.TYPE, MediaStatusResponse.class).status();
-            LOGGER.info(() -> "Received updated media status " + toString(optStatus));
-            if (optStatus.isPresent()) {
-                final MediaStatus ms = optStatus.get();
-                if (!mediaSessionId.isPresent()) {
-                    /* load response not received before timeout, but was successful anyway. */
-                    mediaSessionId = Optional.of(ms.mediaSessionId());
-                }
-                listeners.forEach(l -> l.mediaStatusUpdated(ms));
-            } else {
-                LOGGER.warning(() -> "Received empty media status");
+    private void notifyMediaStatus(final MediaStatusResponse message, final boolean timeout) {
+        final Optional<MediaStatusData> optStatus = message.status();
+        LOGGER.info(() -> "Received updated media status " + toString(optStatus));
+        if (optStatus.isPresent()) {
+            final MediaStatus ms = optStatus.get();
+            if (!mediaSessionId.isPresent()) {
+                /* load response not received before timeout, but was successful anyway. */
+                mediaSessionId = Optional.of(ms.mediaSessionId());
             }
-        } catch (final IOException e) {
-            LOGGER.log(Level.FINE, e, () -> "Could not parse received media status");
+            listeners.forEach(l -> l.mediaStatusUpdated(ms, timeout));
+        } else {
+            LOGGER.warning(() -> "Received empty media status");
         }
     }
 

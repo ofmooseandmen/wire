@@ -46,21 +46,26 @@ import io.omam.wire.io.json.Payload;
 final class DefaultApplicationWire implements ApplicationWire {
 
     /** communication channel. */
-    private final CastV2Channel channel;
+    private final SocketChannel channel;
+
+    /** requestor */
+    private final Requestor requestor;
 
     /**
      * Constructor.
      *
      * @param aChannel communication channel
+     * @param aRequestor requestor
      */
-    DefaultApplicationWire(final CastV2Channel aChannel) {
+    DefaultApplicationWire(final SocketChannel aChannel, final Requestor aRequestor) {
         channel = aChannel;
+        requestor = aRequestor;
     }
 
     @Override
     public final <T extends Payload> CastMessage request(final String namespace, final String destination,
             final T payload, final Duration timeout) throws IOException, TimeoutException {
-        return Requestor.stringPayload(channel).request(namespace, destination, payload, timeout);
+        return requestor.sendUtf8Request(namespace, destination, payload, timeout);
     }
 
     @Override

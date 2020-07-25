@@ -55,12 +55,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.MessageLite;
 
 import io.omam.wire.app.ApplicationController;
 import io.omam.wire.io.CastChannel.AuthChallenge;
 import io.omam.wire.io.CastChannel.CastMessage;
 import io.omam.wire.io.CastChannel.DeviceAuthMessage;
+import io.omam.wire.io.NamespaceListener;
 import io.omam.wire.io.json.Payload;
 
 /**
@@ -73,7 +73,7 @@ import io.omam.wire.io.json.Payload;
  * <p>
  * This controller also answers any received PING message by a PONG to the appropriate destination.
  */
-final class ConnectionController implements ChannelListener, AutoCloseable {
+final class ConnectionController implements NamespaceListener, SocketErrorHandler, AutoCloseable {
 
     /**
      * Close message.
@@ -211,7 +211,10 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(ConnectionController.class.getName());
 
     /** communication channel with the Cast device. */
-    private final CastV2Channel channel;
+    private final SocketChannel channel;
+
+    /** requestor. */
+    private final Requestor requestor;
 
     /** scheduled executor service. */
     private final ScheduledExecutorService ses;
@@ -241,10 +244,11 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
      * Constructor.
      *
      * @param aChannel communication channel with the Cast device
-     *
+     * @param aRequestor requestor
      */
-    ConnectionController(final CastV2Channel aChannel) {
+    ConnectionController(final SocketChannel aChannel, final Requestor aRequestor) {
         channel = aChannel;
+        requestor = aRequestor;
         ses = Executors.newSingleThreadScheduledExecutor(new WireThreadFactory("connection"));
         fPing = null;
         fTimeout = null;
@@ -279,7 +283,18 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
     }
 
     @Override
-    public final void messageReceived(final CastMessage message) {
+    public final void socketError(final IOException e) {
+        LOGGER.log(Level.INFO, "Closing connection after socket error", e);
+        close(c -> c.close(null), ConnectionListener::remoteConnectionClosed);
+    }
+
+    @Override
+    public final void uncorrelatedResponseReceived(final CastMessage message) {
+        LOGGER.warning(() -> "Uncorrelated response received: " + message);
+    }
+
+    @Override
+    public final void unsolicitedMessageReceived(final CastMessage message) {
         lock.lock();
         try {
             if (hasType(message, "PONG")) {
@@ -299,12 +314,6 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
         } finally {
             lock.unlock();
         }
-    }
-
-    @Override
-    public final void socketError() {
-        LOGGER.info("Closing connection after socket error");
-        close(c -> c.close(null), ConnectionListener::remoteConnectionClosed);
     }
 
     /**
@@ -329,9 +338,10 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
             state = State.CONNECTING;
             channel.connect();
             /* authenticate. */
-            final Requestor<MessageLite> auth = Requestor.binaryPayload(channel);
             final long start = System.nanoTime();
-            final CastMessage authResp = auth.request(AUTH_NS, AUTHENTICATION, timeout);
+            /* auth response is assumed to be the first binary message received after sending the request. */
+            final CastMessage authResp =
+                    requestor.sendBinaryRequest(AUTH_NS, AUTHENTICATION, (rep, req) -> true, timeout);
             try {
                 if (DeviceAuthMessage.parseFrom(authResp.getPayloadBinary()).hasError()) {
                     LOGGER.warning("Failed to authenticate with Cast device");
@@ -344,8 +354,8 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
 
             lock.lock();
             try {
-                channel.addListener(this, CONNECTION_NS);
-                channel.addListener(this, HEARTBEAT_NS);
+                channel.addNamespaceListener(this, CONNECTION_NS);
+                channel.addNamespaceListener(this, HEARTBEAT_NS);
                 LOGGER.info(() -> "Received authentication response, connecting...");
                 /* OK to connect. */
                 /* ping the device. */
@@ -444,9 +454,9 @@ final class ConnectionController implements ChannelListener, AutoCloseable {
      * @param closer method to close the channel
      * @param notifier method to notify the listener
      */
-    private final void close(final Consumer<CastV2Channel> closer, final Consumer<ConnectionListener> notifier) {
+    private final void close(final Consumer<SocketChannel> closer, final Consumer<ConnectionListener> notifier) {
         if (state != State.CLOSED) {
-            channel.removeListener(this);
+            channel.removeNamespaceListener(this);
             if (fPing != null) {
                 fPing.cancel(true);
             }

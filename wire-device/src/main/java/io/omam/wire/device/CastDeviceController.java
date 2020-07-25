@@ -64,7 +64,7 @@ public interface CastDeviceController {
      */
     static CastDeviceController v2(final String id, final InetSocketAddress address, final Optional<String> name)
             throws GeneralSecurityException {
-        final CastV2Channel channel = CastV2Channel.create(address);
+        final SocketChannel channel = SocketChannel.create(address);
         return new CastV2DeviceController(id, channel, name);
     }
 
