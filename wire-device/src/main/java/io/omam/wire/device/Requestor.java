@@ -298,7 +298,8 @@ final class Requestor implements ResponseHandler {
     }
 
     /**
-     * Transmits the given binary request and returns the received response.
+     * Transmits the given binary request using the {@link io.omam.wire.io.IoProperties#DEFAULT_RECEIVER_ID default
+     * receiver ID} and returns the received response.
      *
      * @param namespace request namespace
      * @param destination request destination
@@ -330,8 +331,9 @@ final class Requestor implements ResponseHandler {
     }
 
     /**
-     * Transmits the given UTF8 request and returns the received response - correlation is achieved using the
-     * standard request ID mechanism.
+     * Transmits the given UTF8 request using the {@link io.omam.wire.io.IoProperties#DEFAULT_RECEIVER_ID default
+     * receiver ID} and returns the received response - correlation is achieved using the standard request ID
+     * mechanism.
      *
      * @param namespace request namespace
      * @param payload request payload
